@@ -354,9 +354,7 @@ function renderSetup() {
           <img class="hero-bowler" src="./assets/duckpin-bowler.png" alt="Pixel-art bowler throwing a duckpin bowling ball" />
           <img class="hero-duck" src="./assets/duckpin-duck.png" alt="Pixel-art duck knocked backward by a bowling ball" />
         </div>
-        <p class="eyebrow">Duckpin scorekeeper</p>
-        <h1>Keep the game moving.</h1>
-        <p class="hero-copy">A fast, beautiful scorecard built for three-ball duckpin games — even without signal.</p>
+        <h2>Duckpin scorekeeper</h2>
       </section>
       <section class="setup-card">
         <div class="section-heading">
