@@ -30,6 +30,8 @@ Then open `http://localhost:4173`.
 
 The app includes this same rules reference from both the new-game and scoring screens. Its back link returns to the screen it was opened from without changing an active scorecard.
 
+The **Share scores** button sends a plain-text snapshot of the current player totals through the device share sheet, or copies it to the clipboard when native sharing is unavailable.
+
 ## Tests
 
 On a machine with Node.js 20 or newer:

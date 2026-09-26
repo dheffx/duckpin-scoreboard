@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=9";
+} from "./scoring.js?v=10";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -21,6 +21,7 @@ const app = document.querySelector("#app");
 const colorSchemeMedia = window.matchMedia?.("(prefers-color-scheme: dark)") ?? null;
 let state = loadActiveGame();
 let celebration = null;
+let shareFeedback = null;
 let settings = loadSettings();
 let audioContext = null;
 
@@ -352,6 +353,7 @@ function addRoll(pins) {
   const turn = nextRoll(player.frames);
   if (!turn || pins < 0 || pins > turn.maxPins) return;
   player.frames[turn.frameIndex].push(pins);
+  shareFeedback = null;
   const frame = player.frames[turn.frameIndex];
   let feedbackType = "roll";
   if (turn.rollIndex === 0 && pins === 10) {
@@ -406,6 +408,7 @@ function undoRoll() {
   if (!frame?.length) return;
   frame.pop();
   celebration = null;
+  shareFeedback = null;
   state.savedToHistory = false;
   saveGame();
   render();
@@ -884,9 +887,14 @@ function renderGame() {
           <button class="text-button" id="view-history">History</button>
           <button class="text-button" id="view-rules">Rules</button>
           <button class="text-button" data-new-game>New game</button>
-          <button class="text-button" id="share">Share</button>
+          <button class="text-button" id="share" title="Share a text snapshot of the current scores">Share scores</button>
         </div>
       </header>
+      ${
+        shareFeedback
+          ? `<p class="share-feedback ${shareFeedback.type}" role="status">${escapeHtml(shareFeedback.message)}</p>`
+          : ""
+      }
       <section class="score-header">
         <p class="eyebrow">${complete ? `${gameLabel} · final scores` : `${gameLabel} · frame ${frameNumber} of ${FRAME_COUNT}`}</p>
         <h1>${complete ? "Great game." : `${escapeHtml(player.name)} is bowling.`}</h1>
@@ -946,16 +954,29 @@ function renderGame() {
 
 async function shareGame() {
   const lines = state.players.map((player) => `${player.name}: ${scoreText(player)}`);
-  const text = `Duckpin scoreboard\n${lines.join("\n")}`;
+  const gameName = state.title ? ` · ${state.title}` : "";
+  const text = `Duckpin scoreboard${gameName}\n${lines.join("\n")}`;
   try {
     if (navigator.share) {
       await navigator.share({ title: "Duckpin scoreboard", text });
+      shareFeedback = { type: "success", message: "Scorecard shared." };
+      renderGame();
       return;
     }
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("This browser does not support sharing or copying from the app.");
+    }
     await navigator.clipboard.writeText(text);
-    alert("Scoreboard copied to your clipboard.");
+    shareFeedback = { type: "success", message: "Scorecard copied to your clipboard." };
+    renderGame();
   } catch (error) {
-    if (error.name !== "AbortError") console.error("Could not share the scoreboard.", error);
+    if (error.name === "AbortError") return;
+    console.error("Could not share the scoreboard.", error);
+    shareFeedback = {
+      type: "error",
+      message: "Could not share scores. Check your browser permissions and try again."
+    };
+    renderGame();
   }
 }
 
@@ -974,7 +995,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=9", { updateViaCache: "none" })
+      .register("./sw.js?v=10", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
