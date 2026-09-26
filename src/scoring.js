@@ -1,0 +1,112 @@
+export const FRAME_COUNT = 10;
+
+export function createFrames() {
+  return Array.from({ length: FRAME_COUNT }, () => []);
+}
+
+export function isStrike(frame) {
+  return frame[0] === 10;
+}
+
+export function isSpare(frame) {
+  return frame.length === 2 && frame[0] < 10 && frame[0] + frame[1] === 10;
+}
+
+export function isFrameComplete(frame, frameIndex) {
+  if (!frame.length) return false;
+
+  if (frameIndex === FRAME_COUNT - 1) {
+    if (isStrike(frame)) return frame.length === 3;
+    if (frame.length < 2) return false;
+    if (frame[0] + frame[1] === 10) return frame.length === 3;
+    return frame.length === 3;
+  }
+
+  return isStrike(frame) || frame.length === 3 || (frame.length === 2 && frame[0] + frame[1] === 10);
+}
+
+export function nextRoll(frames) {
+  const frameIndex = frames.findIndex((frame, index) => !isFrameComplete(frame, index));
+  if (frameIndex === -1) return null;
+
+  const frame = frames[frameIndex];
+  const isTenth = frameIndex === FRAME_COUNT - 1;
+  const rollIndex = frame.length;
+  let maxPins = 10;
+
+  if (isTenth && frame[0] === 10) {
+    if (rollIndex === 2 && frame[1] < 10) {
+      maxPins = 10 - frame[1];
+    }
+  } else if (rollIndex > 0) {
+    const isSpareBonus = isTenth && frame.length === 2 && frame[0] + frame[1] === 10;
+    if (!isSpareBonus) maxPins = 10 - frame.reduce((total, pins) => total + pins, 0);
+  }
+
+  return { frameIndex, rollIndex, maxPins };
+}
+
+function followingRolls(frames, frameIndex) {
+  return frames.slice(frameIndex + 1).flat();
+}
+
+export function frameScore(frames, frameIndex) {
+  const frame = frames[frameIndex];
+  if (!frame.length) return null;
+
+  if (frameIndex === FRAME_COUNT - 1) {
+    if (isStrike(frame)) return frame.length === 3 ? frame.reduce((total, pins) => total + pins, 0) : null;
+    if (frame.length < 2) return null;
+    if (frame[0] + frame[1] === 10) return frame.length === 3 ? 10 + frame[2] : null;
+    return frame.length === 3 ? frame.reduce((total, pins) => total + pins, 0) : null;
+  }
+
+  if (isStrike(frame)) {
+    const rolls = followingRolls(frames, frameIndex);
+    return rolls.length >= 2 ? 10 + rolls[0] + rolls[1] : null;
+  }
+
+  if (frame.length >= 2 && frame[0] + frame[1] === 10) {
+    const [next] = followingRolls(frames, frameIndex);
+    return next === undefined ? null : 10 + next;
+  }
+
+  return frame.length === 3 ? frame.reduce((total, pins) => total + pins, 0) : null;
+}
+
+export function scoreFrames(frames) {
+  let total = 0;
+  return frames.map((_, frameIndex) => {
+    const score = frameScore(frames, frameIndex);
+    if (score !== null) total += score;
+    return { score, cumulative: score === null ? null : total };
+  });
+}
+
+export function gameTotal(frames) {
+  const scores = scoreFrames(frames);
+  return scores.at(-1)?.cumulative ?? null;
+}
+
+export function formatRoll(frame, rollIndex, frameIndex) {
+  const pins = frame[rollIndex];
+  if (pins === undefined) return "";
+  if (pins === 10) return "X";
+  if (
+    rollIndex === 1 &&
+    frame[0] < 10 &&
+    frame[0] + pins === 10
+  ) {
+    return "/";
+  }
+  if (
+    frameIndex === FRAME_COUNT - 1 &&
+    frame[0] === 10 &&
+    rollIndex === 2 &&
+    frame[1] < 10 &&
+    frame[1] + pins === 10
+  ) {
+    return "/";
+  }
+  return String(pins);
+}

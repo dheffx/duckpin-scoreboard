@@ -1,0 +1,18 @@
+{
+  "name": "Duckpin Scoreboard",
+  "short_name": "Duckpin",
+  "description": "A beautiful, offline duckpin bowling scorekeeper.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f8fb",
+  "theme_color": "#102a43",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/duckpin.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
