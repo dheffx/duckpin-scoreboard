@@ -148,6 +148,19 @@ function undoRoll() {
   render();
 }
 
+function resetGame() {
+  const hasScores = state.players.some((player) => player.frames.some((frame) => frame.length));
+  if (
+    hasScores &&
+    !window.confirm("Start a new game? This clears the current scorecard on this device. Completed games stay saved.")
+  ) {
+    return;
+  }
+  state = null;
+  localStorage.removeItem(STORAGE_KEY);
+  renderSetup();
+}
+
 function scoreText(player) {
   const total = gameTotal(player.frames);
   return total === null ? "—" : total;
@@ -252,10 +265,13 @@ function renderGame() {
   app.innerHTML = `
     <main class="game-shell">
       <header class="game-header">
-        <button class="logo-button" id="restart" aria-label="Start a new game">
+        <div class="logo-button">
           <span class="mini-mark">●</span><span>Duckpin</span>
-        </button>
-        <button class="text-button" id="share">Share</button>
+        </div>
+        <div class="header-actions">
+          <button class="text-button" data-new-game>New game</button>
+          <button class="text-button" id="share">Share</button>
+        </div>
       </header>
       <section class="score-header">
         <p class="eyebrow">${complete ? "Final scores" : "Live scorecard"}</p>
@@ -280,7 +296,7 @@ function renderGame() {
           ? `<section class="complete-card">
               <span class="complete-icon">★</span>
               <div><strong>Scorecards saved</strong><p>Share the results, then start the next game.</p></div>
-              <button class="primary-button compact" id="new-game">New game</button>
+              <button class="primary-button compact" data-new-game>New game</button>
             </section>`
           : `<section class="entry-panel">
               <div class="turn-label">
@@ -297,12 +313,9 @@ function renderGame() {
       }
     </main>`;
 
-  document.querySelector("#restart").addEventListener("click", renderSetup);
   document.querySelector("#share").addEventListener("click", shareGame);
-  document.querySelector("#new-game")?.addEventListener("click", () => {
-    state = null;
-    localStorage.removeItem(STORAGE_KEY);
-    renderSetup();
+  document.querySelectorAll("[data-new-game]").forEach((button) => {
+    button.addEventListener("click", resetGame);
   });
   document.querySelector("#undo")?.addEventListener("click", undoRoll);
   document.querySelectorAll("[data-pins]").forEach((button) => {

@@ -37,6 +37,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 
 .game-header { align-items: center; display: flex; justify-content: space-between; }
 .logo-button { align-items: center; color: #102a43; display: flex; font-size: 18px; gap: 6px; padding: 4px 0; }
+.header-actions { align-items: center; display: flex; gap: 16px; }
 .mini-mark { font-size: 26px; line-height: .5; }
 .text-button { padding: 8px 0; }
 .score-header { margin: 44px 0 22px; }
