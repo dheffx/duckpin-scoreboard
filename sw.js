@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./src/scoring.js?v=6",
   "./src/style.css?v=6",
   "./assets/duckpin-bowler.png",
+  "./assets/duckpin-duck.png",
   "./icons/duckpin.svg"
 ];
 

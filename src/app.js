@@ -256,7 +256,10 @@ function renderSetup() {
   app.innerHTML = `
     <main class="setup-shell">
       <section class="hero">
-        <img class="hero-bowler" src="./assets/duckpin-bowler.png" alt="Pixel-art bowler throwing a duckpin bowling ball" />
+        <div class="hero-sprites">
+          <img class="hero-bowler" src="./assets/duckpin-bowler.png" alt="Pixel-art bowler throwing a duckpin bowling ball" />
+          <img class="hero-duck" src="./assets/duckpin-duck.png" alt="Pixel-art duck knocked backward by a bowling ball" />
+        </div>
         <p class="eyebrow">Duckpin scorekeeper</p>
         <h1>Keep the game moving.</h1>
         <p class="hero-copy">A fast, beautiful scorecard built for three-ball duckpin games — even without signal.</p>
