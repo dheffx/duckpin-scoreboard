@@ -524,10 +524,18 @@ function renderHistory(returnToGame = Boolean(state?.players?.length)) {
   });
 }
 
+function playersInTurnOrder() {
+  if (isGameComplete()) return state.players;
+  return state.players.map(
+    (_, offset) => state.players[(state.activePlayerIndex + offset) % state.players.length]
+  );
+}
+
 function renderGame() {
   const player = activePlayer();
   const turn = nextRoll(player.frames);
   const complete = isGameComplete();
+  const orderedPlayers = playersInTurnOrder();
   const frameNumber = turn ? turn.frameIndex + 1 : FRAME_COUNT;
   const gameLabel = `Game ${state.gameNumber ?? 1}${state.title ? ` · ${state.title}` : ""}`;
   app.innerHTML = `
@@ -556,27 +564,9 @@ function renderGame() {
         <h1>${complete ? "Great game." : `${escapeHtml(player.name)} is bowling.`}</h1>
         ${state.venue ? `<p class="game-venue">${escapeHtml(state.venue)}</p>` : ""}
       </section>
-      <nav class="player-tabs" aria-label="Player scores">
-        ${state.players
-          .map(
-            (item) => `
-              <div class="player-tab ${item.id === player.id ? "selected" : ""}" ${item.id === player.id ? 'aria-current="true"' : ""}>
-                <span style="--player-color:${item.color}"></span>${escapeHtml(item.name)}
-                <b>${scoreText(item)}</b>
-              </div>`
-          )
-          .join("")}
-      </nav>
-      <section class="scorecards">
-        ${state.players.map((item) => scorecard(item, item.id === player.id)).join("")}
-      </section>
       ${
         complete
-          ? `<section class="complete-card">
-              <span class="complete-icon">★</span>
-              <div><strong>Scorecards saved</strong><p>Share the results, then start the next game.</p></div>
-              <button class="primary-button compact" data-new-game>New game</button>
-            </section>`
+          ? ""
           : `<section class="entry-panel">
               <div class="turn-label">
                 <span class="player-dot" style="--player-color:${player.color}"></span>
@@ -589,6 +579,18 @@ function renderGame() {
                 <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Correct last roll</button>
               </div>
             </section>`
+      }
+      <section class="scorecards">
+        ${orderedPlayers.map((item) => scorecard(item, item.id === player.id)).join("")}
+      </section>
+      ${
+        complete
+          ? `<section class="complete-card">
+              <span class="complete-icon">★</span>
+              <div><strong>Scorecards saved</strong><p>Share the results, then start the next game.</p></div>
+              <button class="primary-button compact" data-new-game>New game</button>
+            </section>`
+          : ""
       }
     </main>`;
 

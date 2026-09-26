@@ -88,6 +88,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .tenth { background: #f8fafc; }
 
 .entry-panel { margin-top: 22px; padding: 18px; }
+.entry-panel + .scorecards { margin-top: 22px; }
 .turn-label { align-items: center; display: flex; gap: 10px; margin-bottom: 16px; }
 .turn-label strong { display: block; font-size: 16px; }
 .turn-label p { color: #627d98; font-size: 13px; margin: 1px 0 0; }
