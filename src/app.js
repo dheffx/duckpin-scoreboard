@@ -11,10 +11,12 @@ import {
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
+const ROSTERS_KEY = "duckpin-scoreboard-rosters-v1";
 const COLORS = ["#e95d47", "#277da1", "#7a5195", "#43aa8b", "#f4a261", "#577590"];
 
 const app = document.querySelector("#app");
 let state = loadActiveGame();
+let celebration = null;
 
 function loadActiveGame() {
   try {
@@ -41,6 +43,35 @@ function saveGame() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadStoredList(key, message) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(stored) ? stored : [];
+  } catch (error) {
+    console.warn(message, error);
+    return [];
+  }
+}
+
+function loadHistory() {
+  return loadStoredList(HISTORY_KEY, "Could not load game history.");
+}
+
+function loadRosters() {
+  return loadStoredList(ROSTERS_KEY, "Could not load saved player groups.");
+}
+
+function saveRoster(names) {
+  if (!names.length || names.every((name, index) => name === `Player ${index + 1}`)) return;
+
+  const signature = names.map((name) => name.toLocaleLowerCase()).join("\u0000");
+  const rosters = loadRosters().filter(
+    (roster) => roster.names?.map((name) => name.toLocaleLowerCase()).join("\u0000") !== signature
+  );
+  rosters.unshift({ id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, names });
+  localStorage.setItem(ROSTERS_KEY, JSON.stringify(rosters.slice(0, 8)));
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -50,10 +81,14 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function newGame(playerNames) {
+function newGame(playerNames, details = {}) {
+  const history = loadHistory();
   state = {
     id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
     createdAt: new Date().toISOString(),
+    gameNumber: history.length + 1,
+    title: details.title ?? "",
+    venue: details.venue ?? "",
     players: playerNames.map((name, index) => ({
       id: crypto.randomUUID?.() ?? `${Date.now()}-${index}`,
       name,
@@ -64,6 +99,7 @@ function newGame(playerNames) {
     rollHistory: [],
     savedToHistory: false
   };
+  saveRoster(playerNames);
   saveGame();
   render();
 }
@@ -79,16 +115,19 @@ function isGameComplete() {
 function persistCompletedGame() {
   if (!isGameComplete() || state.savedToHistory) return;
 
-  let history = [];
-  try {
-    history = JSON.parse(localStorage.getItem(HISTORY_KEY)) ?? [];
-  } catch (error) {
-    console.warn("Could not load game history.", error);
-  }
+  const history = loadHistory();
   history.unshift({
     id: state.id,
     playedAt: state.createdAt,
-    players: state.players.map(({ name, frames }) => ({ name, total: gameTotal(frames) }))
+    gameNumber: state.gameNumber,
+    title: state.title,
+    venue: state.venue,
+    players: state.players.map(({ name, color, frames }) => ({
+      name,
+      color,
+      frames: frames.map((frame) => [...frame]),
+      total: gameTotal(frames)
+    }))
   });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 12)));
   state.savedToHistory = true;
@@ -100,8 +139,14 @@ function addRoll(pins) {
   const turn = nextRoll(player.frames);
   if (!turn || pins < 0 || pins > turn.maxPins) return;
   player.frames[turn.frameIndex].push(pins);
+  const frame = player.frames[turn.frameIndex];
+  if (turn.rollIndex === 0 && pins === 10) {
+    celebration = { type: "strike", playerName: player.name };
+  } else if (turn.rollIndex === 1 && frame[0] + pins === 10) {
+    celebration = { type: "spare", playerName: player.name };
+  }
   state.rollHistory.push({ playerId: player.id, frameIndex: turn.frameIndex });
-  if (isFrameComplete(player.frames[turn.frameIndex], turn.frameIndex)) {
+  if (isFrameComplete(frame, turn.frameIndex)) {
     state.activePlayerIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
   }
   persistCompletedGame();
@@ -143,6 +188,7 @@ function undoRoll() {
 
   if (!frame?.length) return;
   frame.pop();
+  celebration = null;
   state.savedToHistory = false;
   saveGame();
   render();
@@ -156,6 +202,7 @@ function resetGame() {
   ) {
     return;
   }
+  celebration = null;
   state = null;
   localStorage.removeItem(STORAGE_KEY);
   renderSetup();
@@ -223,16 +270,30 @@ function renderSetup() {
           <span class="player-count" id="player-count">2 players</span>
         </div>
         <form id="setup-form">
+          <div id="saved-rosters" class="roster-section"></div>
           <div id="player-fields" class="player-fields"></div>
           <button type="button" class="add-player" id="add-player">+ Add player</button>
+          <div class="game-details">
+            <label>
+              <span>Game name <em>optional</em></span>
+              <input id="game-title" maxlength="40" placeholder="Friday night duckpins" />
+            </label>
+            <label>
+              <span>Venue <em>optional</em></span>
+              <input id="game-venue" maxlength="40" placeholder="Your favorite alley" />
+            </label>
+          </div>
           <button class="primary-button" type="submit">Start scoring <span>→</span></button>
         </form>
       </section>
+      <button class="footer-link" id="view-history">View game history</button>
       <p class="footer-note">Scores are stored privately on this device.</p>
     </main>`;
 
   const playerFields = document.querySelector("#player-fields");
   const count = document.querySelector("#player-count");
+  const savedRosters = document.querySelector("#saved-rosters");
+  const rosters = loadRosters();
   let playerNames = ["Player 1", "Player 2"];
   const renderFields = () => {
     playerFields.innerHTML = playerNames.map((name, index) => `
@@ -245,16 +306,104 @@ function renderSetup() {
     document.querySelector("#add-player").hidden = playerNames.length >= 6;
   };
   renderFields();
+  if (rosters.length) {
+    savedRosters.innerHTML = `
+      <p class="field-label">Saved groups</p>
+      <div class="roster-list">
+        ${rosters
+          .map(
+            (roster, index) => `
+              <button type="button" class="roster-button" data-roster-index="${index}">
+                ${escapeHtml(roster.names.join(" · "))}
+              </button>`
+          )
+          .join("")}
+      </div>`;
+  }
 
   document.querySelector("#add-player").addEventListener("click", () => {
     playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
     playerNames.push(`Player ${playerNames.length + 1}`);
     renderFields();
   });
+  document.querySelectorAll("[data-roster-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      playerNames = [...rosters[Number(button.dataset.rosterIndex)].names];
+      renderFields();
+    });
+  });
   document.querySelector("#setup-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const names = [...playerFields.querySelectorAll("input")].map((input) => input.value.trim()).filter(Boolean);
-    if (names.length) newGame(names);
+    const title = document.querySelector("#game-title").value.trim();
+    const venue = document.querySelector("#game-venue").value.trim();
+    if (names.length) newGame(names, { title, venue });
+  });
+  document.querySelector("#view-history").addEventListener("click", renderHistory);
+}
+
+function formatGameDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "Saved game";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function renderHistory(returnToGame = Boolean(state?.players?.length)) {
+  const history = loadHistory();
+  app.innerHTML = `
+    <main class="history-shell">
+      <header class="game-header">
+        <div class="logo-button"><span class="mini-mark">●</span><span>Duckpin</span></div>
+        <button class="text-button" id="back-to-setup">Back</button>
+      </header>
+      <section class="score-header">
+        <p class="eyebrow">On this device</p>
+        <h1>Game history</h1>
+      </section>
+      ${
+        history.length
+          ? `<section class="history-list">
+              ${history
+                .map(
+                  (game, index) => `
+                    <details class="history-game" ${index === 0 ? "open" : ""}>
+                      <summary>
+                        <span><strong>${escapeHtml(game.title || `Game ${game.gameNumber ?? history.length - index}`)}</strong><small>${escapeHtml(formatGameDate(game.playedAt))}${game.venue ? ` · ${escapeHtml(game.venue)}` : ""}</small></span>
+                        <span class="history-total">${game.players.map((player) => escapeHtml(player.total)).join(" · ")}</span>
+                      </summary>
+                      <div class="history-game-body">
+                        ${
+                          game.players.every((player) => Array.isArray(player.frames))
+                            ? `<div class="scorecards">${game.players
+                                .map((player, playerIndex) =>
+                                  scorecard({ ...player, color: player.color ?? COLORS[playerIndex] }, false)
+                                )
+                                .join("")}</div>`
+                            : `<ul class="history-player-totals">${game.players
+                                .map((player) => `<li><span>${escapeHtml(player.name)}</span><strong>${escapeHtml(player.total)}</strong></li>`)
+                                .join("")}</ul>`
+                        }
+                        <button class="delete-history-button" data-history-id="${escapeHtml(game.id)}">Delete game</button>
+                      </div>
+                    </details>`
+                )
+                .join("")}
+            </section>`
+          : `<section class="empty-history"><span>◌</span><h2>No finished games yet.</h2><p>Completed scorecards will appear here automatically.</p></section>`
+      }
+    </main>`;
+
+  document.querySelector("#back-to-setup").addEventListener("click", () => {
+    if (returnToGame) renderGame();
+    else renderSetup();
+  });
+  document.querySelectorAll("[data-history-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!window.confirm("Delete this saved game?")) return;
+      const nextHistory = loadHistory().filter((game) => game.id !== button.dataset.historyId);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+      renderHistory();
+    });
   });
 }
 
@@ -262,20 +411,33 @@ function renderGame() {
   const player = activePlayer();
   const turn = nextRoll(player.frames);
   const complete = isGameComplete();
+  const frameNumber = turn ? turn.frameIndex + 1 : FRAME_COUNT;
+  const gameLabel = `Game ${state.gameNumber ?? 1}${state.title ? ` · ${state.title}` : ""}`;
   app.innerHTML = `
     <main class="game-shell">
+      ${
+        celebration
+          ? `<div class="celebration ${celebration.type}" role="status" aria-live="polite">
+              <span class="celebration-burst" aria-hidden="true">✦ ✦ ✦</span>
+              <strong>${escapeHtml(celebration.playerName)} · ${celebration.type === "strike" ? "Strike!" : "Spare!"}</strong>
+              <span>${celebration.type === "strike" ? "Boom." : "Picked it up."}</span>
+            </div>`
+          : ""
+      }
       <header class="game-header">
         <div class="logo-button">
           <span class="mini-mark">●</span><span>Duckpin</span>
         </div>
         <div class="header-actions">
+          <button class="text-button" id="view-history">History</button>
           <button class="text-button" data-new-game>New game</button>
           <button class="text-button" id="share">Share</button>
         </div>
       </header>
       <section class="score-header">
-        <p class="eyebrow">${complete ? "Final scores" : "Live scorecard"}</p>
-        <h1>${complete ? "Great game." : "Keep rolling."}</h1>
+        <p class="eyebrow">${complete ? `${gameLabel} · final scores` : `${gameLabel} · frame ${frameNumber} of ${FRAME_COUNT}`}</p>
+        <h1>${complete ? "Great game." : `${escapeHtml(player.name)} is bowling.`}</h1>
+        ${state.venue ? `<p class="game-venue">${escapeHtml(state.venue)}</p>` : ""}
       </section>
       <nav class="player-tabs" aria-label="Player scores">
         ${state.players
@@ -307,13 +469,14 @@ function renderGame() {
                 ${Array.from({ length: 11 }, (_, pins) => `
                   <button class="pin-button ${pins > turn.maxPins ? "disabled" : ""}" data-pins="${pins}" ${pins > turn.maxPins ? "disabled" : ""}>${pins === 10 ? "X" : pins}</button>
                 `).join("")}
-                <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Undo last roll</button>
+                <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Correct last roll</button>
               </div>
             </section>`
       }
     </main>`;
 
   document.querySelector("#share").addEventListener("click", shareGame);
+  document.querySelector("#view-history").addEventListener("click", renderHistory);
   document.querySelectorAll("[data-new-game]").forEach((button) => {
     button.addEventListener("click", resetGame);
   });
@@ -321,6 +484,15 @@ function renderGame() {
   document.querySelectorAll("[data-pins]").forEach((button) => {
     button.addEventListener("click", () => addRoll(Number(button.dataset.pins)));
   });
+  if (celebration) {
+    const activeCelebration = celebration;
+    window.setTimeout(() => {
+      if (celebration === activeCelebration) {
+        celebration = null;
+        render();
+      }
+    }, 1500);
+  }
 }
 
 async function shareGame() {
