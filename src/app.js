@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=18";
+} from "./scoring.js?v=19";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -84,7 +84,7 @@ function updateSettings(nextSettings) {
 function clearAllAppData() {
   if (
     !window.confirm(
-      "Clear all Duckpin app data from this device? This permanently removes the current scorecard, game history, saved player groups, and preferences. Exported JSON files are not deleted."
+      "Clear all Duckpin Scorekeeper app data from this device? This permanently removes the current scorecard, game history, saved player groups, and preferences. Exported JSON files are not deleted."
     )
   ) {
     return;
@@ -218,7 +218,7 @@ async function importHistory(event) {
   if (!file) return;
 
   try {
-    if (file.size > 2_000_000) throw new Error("That file is too large to be a Duckpin history export.");
+    if (file.size > 2_000_000) throw new Error("That file is too large to be a Duckpin Scorekeeper history export.");
     const payload = JSON.parse(await file.text());
     if (
       !payload ||
@@ -226,7 +226,7 @@ async function importHistory(event) {
       (!Array.isArray(payload) && payload.version !== 1) ||
       !Array.isArray(Array.isArray(payload) ? payload : payload.games)
     ) {
-      throw new Error("Choose a Duckpin Scoreboard history JSON file.");
+      throw new Error("Choose a Duckpin Scorekeeper history JSON file.");
     }
 
     const importedGames = (Array.isArray(payload) ? payload : payload.games).map(sanitizeImportedGame);
@@ -648,7 +648,7 @@ function renderSetup() {
           <img class="hero-bowler" src="./assets/duckpin-bowler.png" alt="Pixel-art bowler throwing a duckpin bowling ball" />
           <img class="hero-duck" src="./assets/duckpin-duck.png" alt="Pixel-art duck knocked backward by a bowling ball" />
         </div>
-        <h2>Duckpin scorekeeper</h2>
+        <h2>Duckpin Scorekeeper</h2>
       </section>
       <section class="setup-card">
         <div class="section-heading">
@@ -780,7 +780,7 @@ function renderSettings() {
   app.innerHTML = `
     <main class="setup-shell preferences-shell">
       <header class="game-header">
-        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin Scorekeeper</span></div>
         <button class="text-button" id="back-to-setup">Back</button>
       </header>
       <section class="score-header">
@@ -862,12 +862,12 @@ function renderRules(returnToGame) {
   app.innerHTML = `
     <main class="setup-shell rules-shell">
       <header class="game-header">
-        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin Scorekeeper</span></div>
         <button class="text-button" id="back-from-rules">← ${backLabel}</button>
       </header>
       <section class="score-header">
         <p class="eyebrow">Quick reference</p>
-        <h1>Duckpin rules</h1>
+        <h1>Duckpin Scorekeeper rules</h1>
       </section>
       <section class="setup-card rules-card">
         <div class="rules-intro">
@@ -905,7 +905,7 @@ function renderHistory(returnToGame = Boolean(state?.players?.length)) {
   app.innerHTML = `
     <main class="history-shell">
       <header class="game-header">
-        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin Scorekeeper</span></div>
         <button class="text-button" id="back-to-setup">Back</button>
       </header>
       <section class="score-header">
@@ -991,7 +991,7 @@ function renderGame() {
       }
       <header class="game-header">
         <div class="logo-button">
-          <span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span>
+          <span class="logo-badge" aria-hidden="true">10</span><span>Duckpin Scorekeeper</span>
         </div>
         <div class="header-actions">
           <button class="text-button" id="view-history">History</button>
@@ -1068,10 +1068,10 @@ function renderGame() {
 async function shareGame() {
   const lines = state.players.map((player) => `${player.name}: ${scoreText(player)}`);
   const gameName = state.title ? ` · ${state.title}` : "";
-  const text = `Duckpin scoreboard${gameName}\n${lines.join("\n")}`;
+  const text = `Duckpin Scorekeeper${gameName}\n${lines.join("\n")}`;
   try {
     if (navigator.share) {
-      await navigator.share({ title: "Duckpin scoreboard", text });
+      await navigator.share({ title: "Duckpin Scorekeeper", text });
       shareFeedback = { type: "success", message: "Scorecard shared." };
       renderGame();
       return;
@@ -1108,7 +1108,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=18", { updateViaCache: "none" })
+      .register("./sw.js?v=19", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);

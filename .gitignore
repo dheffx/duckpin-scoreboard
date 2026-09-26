@@ -1,0 +1,8 @@
+dist/
+node_modules/
+.DS_Store
+
+android/.gradle/
+android/.idea/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+ios/App/App.xcworkspace/xcuserdata/

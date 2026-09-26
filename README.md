@@ -1,4 +1,4 @@
-# Duckpin Scoreboard
+# Duckpin Scorekeeper
 
 A fast, installable, browser-only scorekeeper for standard ten-frame duckpin bowling. It uses no backend: the active scorecard and recent completed games are stored in your browser's local storage.
 
@@ -26,7 +26,7 @@ Then open `http://localhost:4173`.
 
 The installed app uses the duck sprite as its home-screen icon.
 
-## Duckpin scoring
+## Duckpin Scorekeeper scoring
 
 - Every frame permits up to three balls.
 - A first-ball strike scores 10 plus the following two balls.
@@ -49,3 +49,27 @@ npm test
 ```
 
 The scoring tests cover opens, strikes, spares, three-ball tens, and tenth-frame bonus behavior.
+
+## Native app preparation
+
+This repository includes Capacitor Android and iOS wrappers with the app ID
+`com.dheffx.duckpin`. Native launcher icons use the duck artwork already used
+by the PWA.
+
+Install Node.js 20+ and dependencies, then build and sync the bundled static
+app:
+
+```sh
+npm install
+npm run build
+npm run cap:sync
+```
+
+For Android development, install Android Studio and a current Android SDK. Set
+`ANDROID_HOME` or create the ignored `android/local.properties` with its
+`sdk.dir` value before building. For iOS development, install full Xcode; the
+macOS Command Line Tools alone cannot build the iOS app.
+
+`dist/`, `node_modules/`, copied web assets, SDK paths, and IDE state are
+generated or local-only. The `android/` and `ios/` project source is intended
+to be versioned.

@@ -1,6 +1,6 @@
 {
-  "name": "Duckpin Scoreboard",
-  "short_name": "Duckpin",
+  "name": "Duckpin Scorekeeper",
+  "short_name": "Duckpin SK",
   "description": "A beautiful, offline duckpin bowling scorekeeper.",
   "start_url": "./",
   "display": "standalone",
@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "./icons/duckpin-duck-192.png?v=18",
+      "src": "./icons/duckpin-duck-192.png?v=19",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/duckpin-duck-512.png?v=18",
+      "src": "./icons/duckpin-duck-512.png?v=19",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
