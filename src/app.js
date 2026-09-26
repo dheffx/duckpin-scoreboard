@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=16";
+} from "./scoring.js?v=17";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -394,6 +394,17 @@ function addRoll(pins) {
     state.activePlayerIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
   }
   persistCompletedGame();
+  saveGame();
+  render();
+}
+
+function deferActiveTurn() {
+  const nextIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
+  if (nextIndex === state.activePlayerIndex) return;
+
+  state.activePlayerIndex = nextIndex;
+  celebration = null;
+  shareFeedback = null;
   saveGame();
   render();
 }
@@ -962,6 +973,7 @@ function renderGame() {
   const complete = isGameComplete();
   const orderedPlayers = playersInTurnOrder();
   const frameNumber = turn ? turn.frameIndex + 1 : FRAME_COUNT;
+  const canDeferTurn = !complete && nextPlayerIndex(state.players, state.activePlayerIndex) !== state.activePlayerIndex;
   const gameLabel = `Game ${state.gameNumber ?? 1}${state.title ? ` · ${state.title}` : ""}`;
   app.innerHTML = `
     <main class="game-shell">
@@ -1011,6 +1023,7 @@ function renderGame() {
                   <button class="pin-button ${pins > turn.maxPins ? "disabled" : ""}" data-pins="${pins}" ${pins > turn.maxPins ? "disabled" : ""}>${pins === 10 ? "X" : pins}</button>
                 `).join("")}
                 <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Correct last roll</button>
+                ${canDeferTurn ? `<button class="defer-turn-button" id="defer-turn">Move to end of frame</button>` : ""}
               </div>
             </section>`
       }
@@ -1037,6 +1050,7 @@ function renderGame() {
     button.addEventListener("click", resetGame);
   });
   document.querySelector("#undo")?.addEventListener("click", undoRoll);
+  document.querySelector("#defer-turn")?.addEventListener("click", deferActiveTurn);
   document.querySelectorAll("[data-pins]").forEach((button) => {
     button.addEventListener("click", () => addRoll(Number(button.dataset.pins)));
   });
@@ -1094,7 +1108,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=16", { updateViaCache: "none" })
+      .register("./sw.js?v=17", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
