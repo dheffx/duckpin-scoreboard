@@ -1,11 +1,11 @@
-const CACHE_NAME = "duckpin-scoreboard-v1";
+const CACHE_NAME = "duckpin-scoreboard-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./manifest.webmanifest",
-  "./src/app.js",
-  "./src/scoring.js",
-  "./src/style.css",
+  "./manifest.webmanifest?v=5",
+  "./src/app.js?v=5",
+  "./src/scoring.js?v=5",
+  "./src/style.css?v=5",
   "./icons/duckpin.svg"
 ];
 
@@ -29,18 +29,18 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetched = fetch(event.request)
-        .then((response) => {
-          if (response.ok && new URL(event.request.url).origin === self.location.origin) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || fetched;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok && new URL(event.request.url).origin === self.location.origin) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(event.request).then(
+          (cached) => cached ?? new Response("Offline", { status: 503, statusText: "Offline" })
+        )
+      )
   );
 });

@@ -7,7 +7,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js";
+} from "./scoring.js?v=5";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -344,9 +344,21 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch((error) => {
-    console.warn("Offline support could not be enabled.", error);
-  }));
+  let reloadingForWorkerUpdate = false;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloadingForWorkerUpdate) return;
+      reloadingForWorkerUpdate = true;
+      window.location.reload();
+    });
+
+    navigator.serviceWorker
+      .register("./sw.js?v=5", { updateViaCache: "none" })
+      .then((registration) => registration.update())
+      .catch((error) => {
+        console.warn("Offline support could not be enabled.", error);
+      });
+  });
 }
 
 render();
