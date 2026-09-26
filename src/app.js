@@ -402,7 +402,7 @@ function renderSetup() {
         <input required maxlength="22" value="${escapeHtml(name)}" aria-label="Player ${index + 1} name" />
         ${
           playerNames.length > 1
-            ? `<button type="button" class="remove-player" data-remove-player="${index}" aria-label="Remove ${escapeHtml(name || `player ${index + 1}`)}"><span aria-hidden="true">×</span><span class="remove-player-label">X</span></button>`
+            ? `<button type="button" class="remove-player" data-remove-player="${index}" aria-label="Remove ${escapeHtml(name || `player ${index + 1}`)}"><span aria-hidden="true">×</span></button>`
             : ""
         }
       </div>
