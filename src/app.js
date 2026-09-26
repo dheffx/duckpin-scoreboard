@@ -339,7 +339,7 @@ function renderSetup() {
     const venue = document.querySelector("#game-venue").value.trim();
     if (names.length) newGame(names, { title, venue });
   });
-  document.querySelector("#view-history").addEventListener("click", renderHistory);
+  document.querySelector("#view-history").addEventListener("click", () => renderHistory(false));
 }
 
 function formatGameDate(value) {
@@ -402,7 +402,7 @@ function renderHistory(returnToGame = Boolean(state?.players?.length)) {
       if (!window.confirm("Delete this saved game?")) return;
       const nextHistory = loadHistory().filter((game) => game.id !== button.dataset.historyId);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
-      renderHistory();
+      renderHistory(returnToGame);
     });
   });
 }
@@ -476,7 +476,7 @@ function renderGame() {
     </main>`;
 
   document.querySelector("#share").addEventListener("click", shareGame);
-  document.querySelector("#view-history").addEventListener("click", renderHistory);
+  document.querySelector("#view-history").addEventListener("click", () => renderHistory(true));
   document.querySelectorAll("[data-new-game]").forEach((button) => {
     button.addEventListener("click", resetGame);
   });
