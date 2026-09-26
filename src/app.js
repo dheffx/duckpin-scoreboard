@@ -220,21 +220,22 @@ function renderSetup() {
 
   const playerFields = document.querySelector("#player-fields");
   const count = document.querySelector("#player-count");
-  let playerCount = 2;
+  let playerNames = ["Player 1", "Player 2"];
   const renderFields = () => {
-    playerFields.innerHTML = Array.from({ length: playerCount }, (_, index) => `
+    playerFields.innerHTML = playerNames.map((name, index) => `
       <label class="player-input">
         <span class="color-swatch" style="--player-color:${COLORS[index % COLORS.length]}"></span>
-        <input required maxlength="22" value="${index === 0 ? "Player 1" : index === 1 ? "Player 2" : `Player ${index + 1}`}" aria-label="Player ${index + 1} name" />
+        <input required maxlength="22" value="${escapeHtml(name)}" aria-label="Player ${index + 1} name" />
       </label>
     `).join("");
-    count.textContent = `${playerCount} ${playerCount === 1 ? "player" : "players"}`;
-    document.querySelector("#add-player").hidden = playerCount >= 6;
+    count.textContent = `${playerNames.length} ${playerNames.length === 1 ? "player" : "players"}`;
+    document.querySelector("#add-player").hidden = playerNames.length >= 6;
   };
   renderFields();
 
   document.querySelector("#add-player").addEventListener("click", () => {
-    playerCount += 1;
+    playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
+    playerNames.push(`Player ${playerNames.length + 1}`);
     renderFields();
   });
   document.querySelector("#setup-form").addEventListener("submit", (event) => {
