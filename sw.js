@@ -1,16 +1,16 @@
-const CACHE_NAME = "duckpin-scoreboard-v14";
+const CACHE_NAME = "duckpin-scoreboard-v15";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./manifest.webmanifest?v=14",
-  "./src/app.js?v=14",
-  "./src/scoring.js?v=14",
-  "./src/style.css?v=14",
+  "./manifest.webmanifest?v=15",
+  "./src/app.js?v=15",
+  "./src/scoring.js?v=15",
+  "./src/style.css?v=15",
   "./assets/duckpin-bowler.png",
   "./assets/duckpin-duck.png",
-  "./icons/duckpin-duck-180.png?v=14",
-  "./icons/duckpin-duck-192.png?v=14",
-  "./icons/duckpin-duck-512.png?v=14"
+  "./icons/duckpin-duck-180.png?v=15",
+  "./icons/duckpin-duck-192.png?v=15",
+  "./icons/duckpin-duck-512.png?v=15"
 ];
 
 self.addEventListener("install", (event) => {

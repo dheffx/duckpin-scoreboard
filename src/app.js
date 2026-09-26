@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=14";
+} from "./scoring.js?v=15";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -141,12 +141,16 @@ function saveLastRoster(names) {
   localStorage.setItem(LAST_ROSTER_KEY, JSON.stringify(names));
 }
 
+function rosterSignature(names) {
+  return names.map((name) => name.toLocaleLowerCase()).join("\u0000");
+}
+
 function saveRoster(names) {
   if (!names.length || names.every((name, index) => name === `Player ${index + 1}`)) return;
 
-  const signature = names.map((name) => name.toLocaleLowerCase()).join("\u0000");
+  const signature = rosterSignature(names);
   const rosters = loadRosters().filter(
-    (roster) => roster.names?.map((name) => name.toLocaleLowerCase()).join("\u0000") !== signature
+    (roster) => rosterSignature(roster.names ?? []) !== signature
   );
   rosters.unshift({ id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, names });
   localStorage.setItem(ROSTERS_KEY, JSON.stringify(rosters.slice(0, 8)));
@@ -534,6 +538,38 @@ function gameSummary(players) {
     </section>`;
 }
 
+function finalRankings(players) {
+  const rankedPlayers = completePlayerData(players)
+    .sort((first, second) => second.total - first.total)
+    .map((player, index, sortedPlayers) => ({
+      ...player,
+      rank: index > 0 && player.total === sortedPlayers[index - 1].total
+        ? sortedPlayers[index - 1].rank
+        : index + 1
+    }));
+
+  return `
+    <section class="final-rankings" aria-label="Final rankings">
+      <div class="final-rankings-heading">
+        <div><p class="eyebrow">Final results</p><h2>Rankings</h2></div>
+        <span>Score</span>
+      </div>
+      <ol class="ranking-list">
+        ${rankedPlayers
+          .map(
+            (player, index) => `
+              <li>
+                <span class="ranking-place">${player.rank}</span>
+                <span class="player-dot" style="--player-color:${player.color ?? COLORS[index % COLORS.length]}"></span>
+                <strong>${escapeHtml(player.name)}</strong>
+                <b>${player.total}</b>
+              </li>`
+          )
+          .join("")}
+      </ol>
+    </section>`;
+}
+
 function lastGameCard(game) {
   if (!game?.players?.length) return "";
 
@@ -729,6 +765,7 @@ function renderSetup() {
 }
 
 function renderSettings() {
+  const rosters = loadRosters();
   app.innerHTML = `
     <main class="setup-shell preferences-shell">
       <header class="game-header">
@@ -757,6 +794,25 @@ function renderSettings() {
           </select>
         </label>
       </section>
+      <section class="setup-card saved-groups-manager">
+        <p class="eyebrow">Saved groups</p>
+        <h2>Manage groups</h2>
+        ${
+          rosters.length
+            ? `<ul class="saved-group-list">
+                ${rosters
+                  .map(
+                    (roster, index) => `
+                      <li>
+                        <span>${escapeHtml(roster.names.join(" · "))}</span>
+                        <button type="button" class="remove-roster" data-remove-roster-index="${index}">Remove</button>
+                      </li>`
+                  )
+                  .join("")}
+              </ul>`
+            : `<p class="empty-saved-groups">Groups saved from new games will appear here.</p>`
+        }
+      </section>
       <section class="danger-zone">
         <div><strong>Clear all app data</strong><p>Remove the current game, saved history, player groups, and preferences from this device.</p></div>
         <button class="clear-data-button" id="clear-all-data">Clear all data</button>
@@ -775,6 +831,19 @@ function renderSettings() {
     updateSettings({ theme: event.target.value });
   });
   document.querySelector("#clear-all-data").addEventListener("click", clearAllAppData);
+  document.querySelectorAll("[data-remove-roster-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const roster = rosters[Number(button.dataset.removeRosterIndex)];
+      if (!roster || !window.confirm(`Remove saved group "${roster.names.join(" · ")}"?`)) return;
+
+      const rosterKey = roster.id ?? rosterSignature(roster.names);
+      const remainingRosters = loadRosters().filter(
+        (candidate) => (candidate.id ?? rosterSignature(candidate.names ?? [])) !== rosterKey
+      );
+      localStorage.setItem(ROSTERS_KEY, JSON.stringify(remainingRosters));
+      renderSettings();
+    });
+  });
 }
 
 function renderRules(returnToGame) {
@@ -942,6 +1011,7 @@ function renderGame() {
               </div>
             </section>`
       }
+      ${complete ? finalRankings(state.players) : ""}
       <section class="scorecards">
         ${orderedPlayers.map((item) => scorecard(item, item.id === player.id)).join("")}
       </section>
@@ -1021,7 +1091,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=14", { updateViaCache: "none" })
+      .register("./sw.js?v=15", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
