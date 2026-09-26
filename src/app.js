@@ -397,10 +397,15 @@ function renderSetup() {
   let playerNames = ["Player 1", "Player 2"];
   const renderFields = () => {
     playerFields.innerHTML = playerNames.map((name, index) => `
-      <label class="player-input">
+      <div class="player-input">
         <span class="color-swatch" style="--player-color:${COLORS[index % COLORS.length]}"></span>
         <input required maxlength="22" value="${escapeHtml(name)}" aria-label="Player ${index + 1} name" />
-      </label>
+        ${
+          playerNames.length > 1
+            ? `<button type="button" class="remove-player" data-remove-player="${index}" aria-label="Remove ${escapeHtml(name || `player ${index + 1}`)}"><span aria-hidden="true">×</span><span class="remove-player-label">Remove</span></button>`
+            : ""
+        }
+      </div>
     `).join("");
     count.textContent = `${playerNames.length} ${playerNames.length === 1 ? "player" : "players"}`;
     document.querySelector("#add-player").hidden = playerNames.length >= 6;
@@ -424,6 +429,13 @@ function renderSetup() {
   document.querySelector("#add-player").addEventListener("click", () => {
     playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
     playerNames.push(`Player ${playerNames.length + 1}`);
+    renderFields();
+  });
+  playerFields.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-player]");
+    if (!removeButton || playerNames.length === 1) return;
+    playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
+    playerNames.splice(Number(removeButton.dataset.removePlayer), 1);
     renderFields();
   });
   document.querySelectorAll("[data-roster-index]").forEach((button) => {
