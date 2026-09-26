@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./src/app.js?v=6",
   "./src/scoring.js?v=6",
   "./src/style.css?v=6",
+  "./assets/duckpin-bowler.png",
   "./icons/duckpin.svg"
 ];
 

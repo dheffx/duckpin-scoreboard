@@ -14,8 +14,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #277da1; outline-
 .setup-shell, .game-shell { width: min(100%, 880px); margin: 0 auto; padding: 24px 20px 44px; }
 .setup-shell { min-height: 100svh; display: grid; align-content: center; gap: 28px; max-width: 570px; }
 .hero { padding: 8px 4px; }
-.app-mark, .mini-mark { color: #e95d47; }
-.app-mark { font-size: 54px; line-height: .6; }
+.hero-bowler { display: block; height: 96px; image-rendering: pixelated; margin: -8px 0 2px -9px; width: 96px; }
 .eyebrow { color: #627d98; font-size: 12px; font-weight: 700; letter-spacing: .13em; margin: 0 0 6px; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
 h1 { font-size: clamp(38px, 10vw, 56px); letter-spacing: -.065em; line-height: .97; margin-bottom: 16px; }
@@ -47,7 +46,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .logo-button { align-items: center; color: #102a43; display: flex; font-size: 18px; gap: 6px; padding: 4px 0; }
 .header-actions { align-items: center; display: flex; gap: 12px; }
 .header-actions .text-button { font-size: 13px; }
-.mini-mark { font-size: 26px; line-height: .5; }
+.logo-badge { align-items: center; background: #102a43; border-radius: 6px; color: #f8d66d; display: inline-flex; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; height: 23px; justify-content: center; width: 25px; }
 .text-button { padding: 8px 0; }
 .score-header { margin: 44px 0 22px; }
 .score-header h1 { margin-bottom: 0; }

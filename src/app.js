@@ -256,7 +256,7 @@ function renderSetup() {
   app.innerHTML = `
     <main class="setup-shell">
       <section class="hero">
-        <div class="app-mark" aria-hidden="true">●</div>
+        <img class="hero-bowler" src="./assets/duckpin-bowler.png" alt="Pixel-art bowler throwing a duckpin bowling ball" />
         <p class="eyebrow">Duckpin scorekeeper</p>
         <h1>Keep the game moving.</h1>
         <p class="hero-copy">A fast, beautiful scorecard built for three-ball duckpin games — even without signal.</p>
@@ -353,7 +353,7 @@ function renderHistory(returnToGame = Boolean(state?.players?.length)) {
   app.innerHTML = `
     <main class="history-shell">
       <header class="game-header">
-        <div class="logo-button"><span class="mini-mark">●</span><span>Duckpin</span></div>
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
         <button class="text-button" id="back-to-setup">Back</button>
       </header>
       <section class="score-header">
@@ -426,7 +426,7 @@ function renderGame() {
       }
       <header class="game-header">
         <div class="logo-button">
-          <span class="mini-mark">●</span><span>Duckpin</span>
+          <span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span>
         </div>
         <div class="header-actions">
           <button class="text-button" id="view-history">History</button>
