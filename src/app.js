@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=12";
+} from "./scoring.js?v=13";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -995,7 +995,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=12", { updateViaCache: "none" })
+      .register("./sw.js?v=13", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
