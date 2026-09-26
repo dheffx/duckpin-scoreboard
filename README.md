@@ -28,6 +28,8 @@ Then open `http://localhost:4173`.
 - Knocking down 10 pins across all three balls scores 10 without a bonus.
 - The tenth frame grants two bonus balls after a strike and one after a spare.
 
+The app includes this same rules reference from both the new-game and scoring screens. Its back link returns to the screen it was opened from without changing an active scorecard.
+
 ## Tests
 
 On a machine with Node.js 20 or newer:

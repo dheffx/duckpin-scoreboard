@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=8";
+} from "./scoring.js?v=9";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -613,6 +613,7 @@ function renderSetup() {
         <button class="footer-link" id="export-history">Save history</button>
         <button class="footer-link" id="import-history">Load history</button>
         <button class="footer-link" id="view-settings">Preferences</button>
+        <button class="footer-link" id="view-rules">Rules reference</button>
         <input id="history-file" type="file" accept="application/json,.json" hidden />
       </div>
       <p class="footer-note">Scores are stored privately on this device.</p>
@@ -700,6 +701,7 @@ function renderSetup() {
   });
   document.querySelector("#history-file").addEventListener("change", importHistory);
   document.querySelector("#view-settings").addEventListener("click", renderSettings);
+  document.querySelector("#view-rules").addEventListener("click", () => renderRules(false));
 }
 
 function renderSettings() {
@@ -743,6 +745,43 @@ function renderSettings() {
   });
   document.querySelector("#theme").addEventListener("change", (event) => {
     updateSettings({ theme: event.target.value });
+  });
+}
+
+function renderRules(returnToGame) {
+  const backLabel = returnToGame ? "Back to game" : "Back to new game";
+  app.innerHTML = `
+    <main class="setup-shell rules-shell">
+      <header class="game-header">
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
+        <button class="text-button" id="back-from-rules">← ${backLabel}</button>
+      </header>
+      <section class="score-header">
+        <p class="eyebrow">Quick reference</p>
+        <h1>Duckpin rules</h1>
+      </section>
+      <section class="setup-card rules-card">
+        <div class="rules-intro">
+          <strong>Ten frames. Up to three balls per frame.</strong>
+          <p>Knock down all 10 pins on an earlier ball to end the frame early.</p>
+        </div>
+        <ol class="rules-list">
+          <li><strong>Strike <mark>X</mark></strong><span>All 10 pins on the first ball. Score 10 plus the next two balls.</span></li>
+          <li><strong>Spare <mark>/</mark></strong><span>All 10 pins across the first two balls. Score 10 plus the next ball.</span></li>
+          <li><strong>Three-ball ten</strong><span>All 10 pins across three balls. Score 10 with no bonus.</span></li>
+          <li><strong>Open frame</strong><span>Pins remain after three balls. Score the pins knocked down.</span></li>
+        </ol>
+        <div class="rules-tenth">
+          <p class="eyebrow">Frame 10</p>
+          <p>A strike earns two bonus balls; a spare earns one. After a strike, the pins reset for the next bonus ball. If that ball is not a strike, the final ball can only knock down the pins still standing.</p>
+        </div>
+        <p class="rules-note">A perfect game is 300: twelve strikes in a row.</p>
+      </section>
+    </main>`;
+
+  document.querySelector("#back-from-rules").addEventListener("click", () => {
+    if (returnToGame && state?.players?.length) renderGame();
+    else renderSetup();
   });
 }
 
@@ -843,6 +882,7 @@ function renderGame() {
         </div>
         <div class="header-actions">
           <button class="text-button" id="view-history">History</button>
+          <button class="text-button" id="view-rules">Rules</button>
           <button class="text-button" data-new-game>New game</button>
           <button class="text-button" id="share">Share</button>
         </div>
@@ -885,6 +925,7 @@ function renderGame() {
 
   document.querySelector("#share").addEventListener("click", shareGame);
   document.querySelector("#view-history").addEventListener("click", () => renderHistory(true));
+  document.querySelector("#view-rules").addEventListener("click", () => renderRules(true));
   document.querySelectorAll("[data-new-game]").forEach((button) => {
     button.addEventListener("click", resetGame);
   });
@@ -933,7 +974,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=8", { updateViaCache: "none" })
+      .register("./sw.js?v=9", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
