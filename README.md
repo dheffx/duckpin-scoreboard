@@ -4,6 +4,8 @@ A fast, installable, browser-only scorekeeper for standard ten-frame duckpin bow
 
 Completed game history can be saved as a JSON file and loaded on another device from the setup screen. Imports merge games by ID, so loading the same export twice does not create duplicates.
 
+Finished games include a winner/high-game summary, strike and spare leaders, and a frame-by-frame score progression. The setup screen remembers the latest group of players, lets you shuffle their bowling order, and keeps frequently used groups available as saved shortcuts.
+
 ## Use it
 
 Serve this directory over HTTPS (or `localhost`) with any static host, then open it on a phone and use the browser's **Install app** / **Add to Home Screen** action. GitHub Pages, Cloudflare Pages, Netlify, or any ordinary static file host will work.

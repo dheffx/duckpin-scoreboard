@@ -1,17 +1,19 @@
 import {
   FRAME_COUNT,
   createFrames,
+  frameStats,
   formatRoll,
   gameTotal,
   isFrameComplete,
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=6";
+} from "./scoring.js?v=7";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
 const ROSTERS_KEY = "duckpin-scoreboard-rosters-v1";
+const LAST_ROSTER_KEY = "duckpin-scoreboard-last-roster-v1";
 const COLORS = ["#e95d47", "#277da1", "#7a5195", "#43aa8b", "#f4a261", "#577590"];
 
 const app = document.querySelector("#app");
@@ -59,6 +61,27 @@ function loadHistory() {
 
 function loadRosters() {
   return loadStoredList(ROSTERS_KEY, "Could not load saved player groups.");
+}
+
+function loadLastRoster() {
+  try {
+    const roster = JSON.parse(localStorage.getItem(LAST_ROSTER_KEY));
+    if (
+      Array.isArray(roster) &&
+      roster.length >= 1 &&
+      roster.length <= 6 &&
+      roster.every((name) => typeof name === "string" && name.trim())
+    ) {
+      return roster;
+    }
+  } catch (error) {
+    console.warn("Could not load the last player group.", error);
+  }
+  return null;
+}
+
+function saveLastRoster(names) {
+  localStorage.setItem(LAST_ROSTER_KEY, JSON.stringify(names));
 }
 
 function saveRoster(names) {
@@ -193,6 +216,7 @@ function newGame(playerNames, details = {}) {
     rollHistory: [],
     savedToHistory: false
   };
+  saveLastRoster(playerNames);
   saveRoster(playerNames);
   saveGame();
   render();
@@ -307,6 +331,86 @@ function scoreText(player) {
   return total === null ? "—" : total;
 }
 
+function completePlayerData(players) {
+  return players.map((player) => {
+    const scores = scoreFrames(player.frames);
+    return {
+      ...player,
+      total: Number.isFinite(player.total) ? player.total : gameTotal(player.frames),
+      stats: frameStats(player.frames),
+      progress: scores.map((score) => score.cumulative ?? 0)
+    };
+  });
+}
+
+function statLeaders(players, stat) {
+  const highest = Math.max(...players.map((player) => player.stats[stat]));
+  if (!highest) return "None";
+  const names = players
+    .filter((player) => player.stats[stat] === highest)
+    .map((player) => escapeHtml(player.name))
+    .join(" & ");
+  return `${names} (${highest})`;
+}
+
+function gameSummary(players) {
+  if (!players.length || players.some((player) => !Array.isArray(player.frames))) return "";
+
+  const scoredPlayers = completePlayerData(players);
+  const highGame = Math.max(...scoredPlayers.map((player) => player.total));
+  const winners = scoredPlayers
+    .filter((player) => player.total === highGame)
+    .map((player) => escapeHtml(player.name))
+    .join(" & ");
+  const chartMaximum = Math.max(highGame, 1);
+
+  return `
+    <section class="game-summary" aria-label="Game summary">
+      <div class="summary-heading">
+        <div>
+          <p class="eyebrow">Game summary</p>
+          <h2>${winners} ${winners.includes(" & ") ? "tie" : "wins"}</h2>
+        </div>
+        <strong class="summary-score">${highGame}</strong>
+      </div>
+      <dl class="summary-stats">
+        <div><dt>High game</dt><dd>${highGame}</dd></div>
+        <div><dt>Most strikes</dt><dd>${statLeaders(scoredPlayers, "strikes")}</dd></div>
+        <div><dt>Most spares</dt><dd>${statLeaders(scoredPlayers, "spares")}</dd></div>
+      </dl>
+      <div class="progression-heading">
+        <strong>Score through each frame</strong>
+        <span>Frame</span>
+      </div>
+      <div class="progression-chart">
+        ${scoredPlayers
+          .map(
+            (player, playerIndex) => `
+              <div class="progression-player">
+                <div class="progression-player-name">
+                  <span class="player-dot" style="--player-color:${player.color ?? COLORS[playerIndex % COLORS.length]}"></span>
+                  <strong>${escapeHtml(player.name)}</strong>
+                  <span>${player.stats.strikes} X · ${player.stats.spares} /</span>
+                </div>
+                <ol class="progression-points" aria-label="${escapeHtml(player.name)} score progression">
+                  ${player.progress
+                    .map(
+                      (score, frameIndex) => `
+                        <li title="Frame ${frameIndex + 1}: ${score}">
+                          <span class="progression-bar" style="--progress:${Math.max(8, Math.round((score / chartMaximum) * 100))}%;--progress-color:${player.color ?? COLORS[playerIndex % COLORS.length]}"></span>
+                          <b>${score}</b>
+                          <small>${frameIndex + 1}</small>
+                        </li>`
+                    )
+                    .join("")}
+                </ol>
+              </div>`
+          )
+          .join("")}
+      </div>
+    </section>`;
+}
+
 function rollCells(frame, frameIndex) {
   const cellCount = frameIndex === 9 ? 3 : isFrameComplete(frame, frameIndex) && frame[0] === 10 ? 1 : 3;
   return Array.from({ length: cellCount }, (_, rollIndex) => {
@@ -367,7 +471,10 @@ function renderSetup() {
         <form id="setup-form">
           <div id="saved-rosters" class="roster-section"></div>
           <div id="player-fields" class="player-fields"></div>
-          <button type="button" class="add-player" id="add-player">+ Add player</button>
+          <div class="setup-shortcuts">
+            <button type="button" class="add-player" id="add-player">+ Add player</button>
+            <button type="button" class="shuffle-button" id="shuffle-players">Shuffle order</button>
+          </div>
           <div class="game-details">
             <label>
               <span>Game name <em>optional</em></span>
@@ -394,7 +501,10 @@ function renderSetup() {
   const count = document.querySelector("#player-count");
   const savedRosters = document.querySelector("#saved-rosters");
   const rosters = loadRosters();
-  let playerNames = ["Player 1", "Player 2"];
+  let playerNames = loadLastRoster() ?? ["Player 1", "Player 2"];
+  const syncPlayerNames = () => {
+    playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
+  };
   const renderFields = () => {
     playerFields.innerHTML = playerNames.map((name, index) => `
       <div class="player-input">
@@ -409,6 +519,7 @@ function renderSetup() {
     `).join("");
     count.textContent = `${playerNames.length} ${playerNames.length === 1 ? "player" : "players"}`;
     document.querySelector("#add-player").hidden = playerNames.length >= 6;
+    document.querySelector("#shuffle-players").hidden = playerNames.length < 2;
   };
   renderFields();
   if (rosters.length) {
@@ -418,7 +529,8 @@ function renderSetup() {
         ${rosters
           .map(
             (roster, index) => `
-              <button type="button" class="roster-button" data-roster-index="${index}">
+              <button type="button" class="roster-button" data-roster-index="${index}" aria-label="Copy saved group ${escapeHtml(roster.names.join(", "))} to the player list">
+                <span>Copy</span>
                 ${escapeHtml(roster.names.join(" · "))}
               </button>`
           )
@@ -427,14 +539,22 @@ function renderSetup() {
   }
 
   document.querySelector("#add-player").addEventListener("click", () => {
-    playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
+    syncPlayerNames();
     playerNames.push(`Player ${playerNames.length + 1}`);
+    renderFields();
+  });
+  document.querySelector("#shuffle-players").addEventListener("click", () => {
+    syncPlayerNames();
+    for (let index = playerNames.length - 1; index > 0; index -= 1) {
+      const targetIndex = Math.floor(Math.random() * (index + 1));
+      [playerNames[index], playerNames[targetIndex]] = [playerNames[targetIndex], playerNames[index]];
+    }
     renderFields();
   });
   playerFields.addEventListener("click", (event) => {
     const removeButton = event.target.closest("[data-remove-player]");
     if (!removeButton || playerNames.length === 1) return;
-    playerNames = [...playerFields.querySelectorAll("input")].map((input) => input.value);
+    syncPlayerNames();
     playerNames.splice(Number(removeButton.dataset.removePlayer), 1);
     renderFields();
   });
@@ -489,6 +609,7 @@ function renderHistory(returnToGame = Boolean(state?.players?.length)) {
                         <span class="history-total">${game.players.map((player) => escapeHtml(player.total)).join(" · ")}</span>
                       </summary>
                       <div class="history-game-body">
+                        ${gameSummary(game.players)}
                         ${
                           game.players.every((player) => Array.isArray(player.frames))
                             ? `<div class="scorecards">${game.players
@@ -589,7 +710,8 @@ function renderGame() {
               <span class="complete-icon">★</span>
               <div><strong>Scorecards saved</strong><p>Share the results, then start the next game.</p></div>
               <button class="primary-button compact" data-new-game>New game</button>
-            </section>`
+            </section>
+            ${gameSummary(state.players)}`
           : ""
       }
     </main>`;
@@ -644,7 +766,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=6", { updateViaCache: "none" })
+      .register("./sw.js?v=7", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);

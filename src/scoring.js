@@ -98,6 +98,16 @@ export function gameTotal(frames) {
   return scores.at(-1)?.cumulative ?? null;
 }
 
+export function frameStats(frames) {
+  return frames.reduce(
+    (stats, frame) => ({
+      strikes: stats.strikes + (isStrike(frame) ? 1 : 0),
+      spares: stats.spares + (isSpare(frame) ? 1 : 0)
+    }),
+    { strikes: 0, spares: 0 }
+  );
+}
+
 export function formatRoll(frame, rollIndex, frameIndex) {
   const pins = frame[rollIndex];
   if (pins === undefined) return "";

@@ -41,8 +41,10 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
   .remove-player { border-color: #f8b4b4; border-radius: 99px; color: #ba2525; font-size: 12px; font-weight: 700; gap: 3px; height: 31px; padding: 0 10px; width: auto; }
   .remove-player-label { display: inline; }
 }
-.add-player, .text-button, .logo-button { background: transparent; border: 0; color: #277da1; font-weight: 700; }
-.add-player { margin: 15px 0 24px; padding: 3px 0; }
+.add-player, .text-button, .logo-button, .shuffle-button { background: transparent; border: 0; color: #277da1; font-weight: 700; }
+.setup-shortcuts { align-items: center; display: flex; gap: 18px; margin: 15px 0 24px; }
+.add-player, .shuffle-button { padding: 3px 0; }
+.shuffle-button { color: #486581; font-size: 13px; }
 .primary-button { align-items: center; background: #102a43; border: 0; border-radius: 13px; color: #fff; display: flex; font-weight: 700; justify-content: space-between; padding: 16px 18px; width: 100%; }
 .primary-button span { font-size: 21px; line-height: 0; }
 .footer-note { color: #829ab1; font-size: 13px; margin: 0; text-align: center; }
@@ -53,6 +55,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .game-details em { color: #9fb3c8; font-size: 10px; font-style: normal; letter-spacing: 0; }
 .roster-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .roster-button { background: #eaf2f8; border: 1px solid #d9e2ec; border-radius: 99px; color: #334e68; font-size: 12px; font-weight: 600; padding: 7px 10px; }
+.roster-button span { color: #277da1; font-size: 10px; letter-spacing: .04em; margin-right: 3px; text-transform: uppercase; }
 .game-details { border-top: 1px solid #e8eef3; display: grid; gap: 12px; margin: 0 -1px 20px; padding-top: 20px; }
 .game-details input { background: #f8fafc; border: 1px solid #d9e2ec; border-radius: 10px; color: #102a43; font-size: 14px; padding: 12px; width: 100%; }
 
@@ -103,6 +106,27 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .complete-card strong { display: block; font-size: 15px; }
 .complete-card p { color: #627d98; font-size: 13px; margin: 2px 0 0; }
 .compact { grid-column: 1 / -1; padding: 13px 15px; }
+.game-summary { background: #fff; border: 1px solid #d9e2ec; border-radius: 15px; margin-top: 22px; overflow: hidden; padding: 18px; }
+.summary-heading { align-items: end; display: flex; gap: 16px; justify-content: space-between; }
+.summary-heading .eyebrow { margin-bottom: 4px; }
+.summary-heading h2 { font-size: 22px; }
+.summary-score { color: #277da1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 30px; line-height: 1; }
+.summary-stats { border-bottom: 1px solid #e8eef3; border-top: 1px solid #e8eef3; display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin: 18px 0; padding: 14px 0; }
+.summary-stats div { min-width: 0; }
+.summary-stats dt { color: #829ab1; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.summary-stats dd { color: #102a43; font-size: 13px; font-weight: 700; margin: 4px 0 0; overflow-wrap: anywhere; }
+.progression-heading { align-items: baseline; display: flex; justify-content: space-between; margin-bottom: 12px; }
+.progression-heading strong { font-size: 14px; }
+.progression-heading span { color: #829ab1; font-size: 11px; }
+.progression-chart { display: grid; gap: 14px; }
+.progression-player { display: grid; gap: 8px; }
+.progression-player-name { align-items: center; display: flex; font-size: 13px; gap: 7px; }
+.progression-player-name > span:last-child { color: #829ab1; font-size: 11px; margin-left: auto; }
+.progression-points { align-items: end; display: grid; gap: 3px; grid-template-columns: repeat(10, 1fr); height: 82px; list-style: none; margin: 0; padding: 0; }
+.progression-points li { align-items: center; display: flex; flex-direction: column; height: 100%; justify-content: end; min-width: 0; position: relative; }
+.progression-bar { background: var(--progress-color, #9fb3c8); border-radius: 3px 3px 0 0; height: var(--progress); max-width: 22px; width: 100%; }
+.progression-points b { color: #486581; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 600; line-height: 1; margin-top: 3px; }
+.progression-points small { color: #9fb3c8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; line-height: 1; margin-top: 3px; }
 
 .history-shell { margin: 0 auto; max-width: 880px; min-height: 100svh; padding: 24px 20px 44px; }
 .history-list { display: grid; gap: 12px; }
@@ -113,6 +137,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .history-game summary small { color: #627d98; display: block; font-size: 12px; margin-top: 3px; }
 .history-total { color: #102a43; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-weight: 700; }
 .history-game-body { border-top: 1px solid #e8eef3; padding: 14px; }
+.history-game-body .game-summary { margin: 0 0 14px; }
 .history-player-totals { display: grid; gap: 8px; list-style: none; margin: 0 0 14px; padding: 0; }
 .history-player-totals li { align-items: center; color: #486581; display: flex; font-size: 14px; justify-content: space-between; }
 .history-player-totals strong { color: #102a43; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }

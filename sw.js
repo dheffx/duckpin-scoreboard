@@ -1,11 +1,11 @@
-const CACHE_NAME = "duckpin-scoreboard-v6";
+const CACHE_NAME = "duckpin-scoreboard-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./manifest.webmanifest?v=6",
-  "./src/app.js?v=6",
-  "./src/scoring.js?v=6",
-  "./src/style.css?v=6",
+  "./manifest.webmanifest?v=7",
+  "./src/app.js?v=7",
+  "./src/scoring.js?v=7",
+  "./src/style.css?v=7",
   "./assets/duckpin-bowler.png",
   "./assets/duckpin-duck.png",
   "./icons/duckpin.svg"

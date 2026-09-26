@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createFrames,
+  frameStats,
   formatRoll,
   gameTotal,
   nextPlayerIndex,
@@ -70,4 +71,9 @@ test("advances turns in player order and skips finished players", () => {
 
   players[1].frames[9] = [0, 0, 0];
   assert.equal(nextPlayerIndex(players, 0), 2);
+});
+
+test("counts strike and spare frames for game summaries", () => {
+  const frames = game([10], [7, 3], [3, 3, 4], ...Array.from({ length: 7 }, () => [0, 0, 0]));
+  assert.deepEqual(frameStats(frames), { strikes: 1, spares: 1 });
 });
