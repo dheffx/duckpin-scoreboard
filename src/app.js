@@ -72,6 +72,100 @@ function saveRoster(names) {
   localStorage.setItem(ROSTERS_KEY, JSON.stringify(rosters.slice(0, 8)));
 }
 
+function exportHistory() {
+  const payload = {
+    format: "duckpin-scoreboard-history",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    games: loadHistory()
+  };
+  const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `duckpin-history-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeImportedGame(game) {
+  if (!game || typeof game.id !== "string" || !Array.isArray(game.players) || !game.players.length) {
+    throw new Error("Each game needs an ID and at least one player.");
+  }
+
+  const players = game.players.map((player, index) => {
+    if (!player || typeof player.name !== "string" || !Number.isFinite(player.total)) {
+      throw new Error("Each player needs a name and final score.");
+    }
+    if (
+      player.frames !== undefined &&
+      (!Array.isArray(player.frames) ||
+        player.frames.length !== FRAME_COUNT ||
+        player.frames.some(
+          (frame) =>
+            !Array.isArray(frame) ||
+            frame.length > 3 ||
+            frame.some((pins) => !Number.isInteger(pins) || pins < 0 || pins > 10)
+        ))
+    ) {
+      throw new Error("A scorecard contains invalid frame data.");
+    }
+
+    return {
+      name: player.name,
+      color: COLORS[index % COLORS.length],
+      total: player.total,
+      ...(player.frames ? { frames: player.frames.map((frame) => [...frame]) } : {})
+    };
+  });
+
+  return {
+    id: game.id,
+    playedAt: typeof game.playedAt === "string" ? game.playedAt : new Date().toISOString(),
+    gameNumber: Number.isInteger(game.gameNumber) ? game.gameNumber : undefined,
+    title: typeof game.title === "string" ? game.title : "",
+    venue: typeof game.venue === "string" ? game.venue : "",
+    players
+  };
+}
+
+async function importHistory(event) {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  try {
+    if (file.size > 2_000_000) throw new Error("That file is too large to be a Duckpin history export.");
+    const payload = JSON.parse(await file.text());
+    if (
+      !payload ||
+      (payload.format !== "duckpin-scoreboard-history" && !Array.isArray(payload)) ||
+      (!Array.isArray(payload) && payload.version !== 1) ||
+      !Array.isArray(Array.isArray(payload) ? payload : payload.games)
+    ) {
+      throw new Error("Choose a Duckpin Scoreboard history JSON file.");
+    }
+
+    const importedGames = (Array.isArray(payload) ? payload : payload.games).map(sanitizeImportedGame);
+    const existingGames = loadHistory();
+    const existingIds = new Set(existingGames.map((game) => game.id));
+    const newGames = importedGames.filter((game) => !existingIds.has(game.id));
+    const mergedGames = [...newGames, ...existingGames].sort(
+      (first, second) => new Date(second.playedAt).valueOf() - new Date(first.playedAt).valueOf()
+    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(mergedGames));
+    alert(
+      newGames.length
+        ? `Loaded ${newGames.length} new ${newGames.length === 1 ? "game" : "games"}.`
+        : "No new games were found in that file."
+    );
+  } catch (error) {
+    console.error("Could not import game history.", error);
+    alert(`Could not load history: ${error.message}`);
+  } finally {
+    event.target.value = "";
+  }
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -289,7 +383,12 @@ function renderSetup() {
           <button class="primary-button" type="submit">Start scoring <span>→</span></button>
         </form>
       </section>
-      <button class="footer-link" id="view-history">View game history</button>
+      <div class="history-actions">
+        <button class="footer-link" id="view-history">View game history</button>
+        <button class="footer-link" id="export-history">Save history</button>
+        <button class="footer-link" id="import-history">Load history</button>
+        <input id="history-file" type="file" accept="application/json,.json" hidden />
+      </div>
       <p class="footer-note">Scores are stored privately on this device.</p>
     </main>`;
 
@@ -343,6 +442,11 @@ function renderSetup() {
     if (names.length) newGame(names, { title, venue });
   });
   document.querySelector("#view-history").addEventListener("click", () => renderHistory(false));
+  document.querySelector("#export-history").addEventListener("click", exportHistory);
+  document.querySelector("#import-history").addEventListener("click", () => {
+    document.querySelector("#history-file").click();
+  });
+  document.querySelector("#history-file").addEventListener("change", importHistory);
 }
 
 function formatGameDate(value) {

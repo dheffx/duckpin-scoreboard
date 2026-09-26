@@ -36,6 +36,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .primary-button span { font-size: 21px; line-height: 0; }
 .footer-note { color: #829ab1; font-size: 13px; margin: 0; text-align: center; }
 .footer-link { background: transparent; border: 0; color: #277da1; font-size: 14px; font-weight: 700; justify-self: center; padding: 2px; }
+.history-actions { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
 .roster-section { margin-bottom: 20px; }
 .field-label, .game-details label > span { color: #627d98; display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; margin: 0 0 7px; text-transform: uppercase; }
 .game-details em { color: #9fb3c8; font-size: 10px; font-style: normal; letter-spacing: 0; }
