@@ -223,6 +223,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 :root[data-theme="dark"] .primary-button,
 :root[data-theme="dark"] .logo-badge,
 :root[data-theme="dark"] .pin-button:not(:disabled):active { background: #277da1; }
+:root[data-theme="dark"] .pin-button.disabled { background: #102a43; border-color: #243b53; color: #627d98; cursor: default; opacity: .7; }
 :root[data-theme="dark"] .empty-history > span,
 :root[data-theme="dark"] .footer-note,
 :root[data-theme="dark"] .game-venue,
