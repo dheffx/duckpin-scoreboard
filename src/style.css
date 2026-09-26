@@ -271,10 +271,12 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 :root[data-theme="dark"] .share-feedback { background: #103c39; border-color: #167d6b; color: #b8f5e7; }
 :root[data-theme="dark"] .share-feedback.error { background: #4c1d1d; border-color: #9b1c1c; color: #fecaca; }
 
-.celebration { align-items: center; animation: celebrate-in 1.5s ease-out forwards; background: #102a43; border-radius: 14px; box-shadow: 0 14px 30px rgba(16, 42, 67, .24); color: #fff; display: grid; gap: 1px; left: 20px; padding: 12px 16px; position: fixed; right: 20px; text-align: center; top: 16px; z-index: 10; }
+.celebration { align-items: center; animation: celebrate-in 2s ease-out forwards; background: #102a43; border-radius: 14px; box-shadow: 0 14px 30px rgba(16, 42, 67, .24); color: #fff; display: grid; gap: 10px; grid-template-columns: 70px 1fr; left: 20px; padding: 8px 14px 8px 8px; position: fixed; right: 20px; text-align: left; top: 16px; z-index: 10; }
 .celebration.spare { background: #277da1; }
+.celebration-sprite { display: block; height: 70px; image-rendering: pixelated; width: 70px; }
+.celebration-copy { display: grid; gap: 1px; }
 .celebration strong { font-size: 18px; letter-spacing: -.025em; }
-.celebration > span:last-child { color: rgba(255, 255, 255, .76); font-size: 12px; font-weight: 600; }
+.celebration-copy > span:last-child { color: rgba(255, 255, 255, .76); font-size: 12px; font-weight: 600; }
 .celebration-burst { color: #f8d66d; font-size: 13px; letter-spacing: .38em; }
 @keyframes celebrate-in {
   0% { opacity: 0; transform: translateY(-18px) scale(.92); }

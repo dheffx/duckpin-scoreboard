@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=15";
+} from "./scoring.js?v=16";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -968,9 +968,12 @@ function renderGame() {
       ${
         celebration
           ? `<div class="celebration ${celebration.type}" role="status" aria-live="polite">
-              <span class="celebration-burst" aria-hidden="true">✦ ✦ ✦</span>
-              <strong>${escapeHtml(celebration.playerName)} · ${celebration.type === "strike" ? "Strike!" : "Spare!"}</strong>
-              <span>${celebration.type === "strike" ? "Boom." : "Picked it up."}</span>
+              <img class="celebration-sprite" src="./assets/terrier-${celebration.type}.png" alt="" aria-hidden="true" />
+              <div class="celebration-copy">
+                <span class="celebration-burst" aria-hidden="true">✦ ✦ ✦</span>
+                <strong>${escapeHtml(celebration.playerName)} · ${celebration.type === "strike" ? "Strike!" : "Spare!"}</strong>
+                <span>${celebration.type === "strike" ? "Boom." : "Picked it up."}</span>
+              </div>
             </div>`
           : ""
       }
@@ -1044,7 +1047,7 @@ function renderGame() {
         celebration = null;
         render();
       }
-    }, 1500);
+    }, 2000);
   }
 }
 
@@ -1091,7 +1094,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=15", { updateViaCache: "none" })
+      .register("./sw.js?v=16", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
