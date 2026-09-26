@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=13";
+} from "./scoring.js?v=14";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -79,6 +79,27 @@ function updateSettings(nextSettings) {
   settings = { ...settings, ...nextSettings };
   saveSettings();
   applyTheme();
+}
+
+function clearAllAppData() {
+  if (
+    !window.confirm(
+      "Clear all Duckpin app data from this device? This permanently removes the current scorecard, game history, saved player groups, and preferences. Exported JSON files are not deleted."
+    )
+  ) {
+    return;
+  }
+
+  [STORAGE_KEY, HISTORY_KEY, ROSTERS_KEY, LAST_ROSTER_KEY, SETTINGS_KEY].forEach((key) => {
+    localStorage.removeItem(key);
+  });
+  state = null;
+  celebration = null;
+  shareFeedback = null;
+  settings = { haptics: false, sound: false, theme: "system" };
+  audioContext = null;
+  applyTheme();
+  renderSetup();
 }
 
 function loadStoredList(key, message) {
@@ -736,6 +757,10 @@ function renderSettings() {
           </select>
         </label>
       </section>
+      <section class="danger-zone">
+        <div><strong>Clear all app data</strong><p>Remove the current game, saved history, player groups, and preferences from this device.</p></div>
+        <button class="clear-data-button" id="clear-all-data">Clear all data</button>
+      </section>
       <p class="footer-note">Preferences are stored privately on this device.</p>
     </main>`;
 
@@ -749,6 +774,7 @@ function renderSettings() {
   document.querySelector("#theme").addEventListener("change", (event) => {
     updateSettings({ theme: event.target.value });
   });
+  document.querySelector("#clear-all-data").addEventListener("click", clearAllAppData);
 }
 
 function renderRules(returnToGame) {
@@ -995,7 +1021,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=13", { updateViaCache: "none" })
+      .register("./sw.js?v=14", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);

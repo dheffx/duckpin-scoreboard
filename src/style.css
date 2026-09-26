@@ -80,6 +80,11 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .switch input:checked + span::after { transform: translateX(20px); }
 .switch input:focus-visible + span { outline: 3px solid #277da1; outline-offset: 3px; }
 .sr-only { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.danger-zone { align-items: center; border: 1px solid #f8b4b4; border-radius: 15px; display: flex; gap: 16px; justify-content: space-between; padding: 17px; }
+.danger-zone strong { color: #9b1c1c; display: block; font-size: 15px; }
+.danger-zone p { color: #627d98; font-size: 12px; line-height: 1.35; margin: 4px 0 0; max-width: 330px; }
+.clear-data-button { background: #fff5f5; border: 1px solid #f8b4b4; border-radius: 9px; color: #9b1c1c; flex: 0 0 auto; font-size: 13px; font-weight: 700; padding: 10px 12px; }
+.clear-data-button:hover { background: #fee2e2; }
 .rules-shell { align-content: start; max-width: 570px; }
 .rules-shell .score-header { margin: 44px 0 22px; }
 .rules-card { display: grid; gap: 20px; }
@@ -208,6 +213,11 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 :root[data-theme="dark"] .history-total,
 :root[data-theme="dark"] .history-player-totals strong { color: #f0f4f8; }
 :root[data-theme="dark"] .last-game-card { background: #1d3a55; border-color: #486581; }
+:root[data-theme="dark"] .danger-zone { border-color: #9b1c1c; }
+:root[data-theme="dark"] .danger-zone strong { color: #fecaca; }
+:root[data-theme="dark"] .danger-zone p { color: #9fb3c8; }
+:root[data-theme="dark"] .clear-data-button { background: #4c1d1d; border-color: #9b1c1c; color: #fecaca; }
+:root[data-theme="dark"] .clear-data-button:hover { background: #652020; }
 :root[data-theme="dark"] .player-count,
 :root[data-theme="dark"] .roster-button { background: #243b53; border-color: #486581; color: #d9e2ec; }
 :root[data-theme="dark"] .remove-player { background: #243b53; border-color: #486581; }

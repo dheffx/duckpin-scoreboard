@@ -34,6 +34,8 @@ The app includes this same rules reference from both the new-game and scoring sc
 
 The **Share scores** button sends a plain-text snapshot of the current player totals through the device share sheet, or copies it to the clipboard when native sharing is unavailable.
 
+To start completely fresh, use **Preferences → Clear all data**. The confirmation removes app data stored on that device but does not delete JSON history files previously exported.
+
 ## Tests
 
 On a machine with Node.js 20 or newer:
