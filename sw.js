@@ -1,11 +1,11 @@
-const CACHE_NAME = "duckpin-scoreboard-v5";
+const CACHE_NAME = "duckpin-scoreboard-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./manifest.webmanifest?v=5",
-  "./src/app.js?v=5",
-  "./src/scoring.js?v=5",
-  "./src/style.css?v=5",
+  "./manifest.webmanifest?v=6",
+  "./src/app.js?v=6",
+  "./src/scoring.js?v=6",
+  "./src/style.css?v=6",
   "./icons/duckpin.svg"
 ];
 
@@ -29,7 +29,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-store" })
       .then((response) => {
         if (response.ok && new URL(event.request.url).origin === self.location.origin) {
           const copy = response.clone();
