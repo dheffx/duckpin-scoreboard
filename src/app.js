@@ -8,17 +8,21 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=7";
+} from "./scoring.js?v=8";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
 const ROSTERS_KEY = "duckpin-scoreboard-rosters-v1";
 const LAST_ROSTER_KEY = "duckpin-scoreboard-last-roster-v1";
+const SETTINGS_KEY = "duckpin-scoreboard-settings-v1";
 const COLORS = ["#e95d47", "#277da1", "#7a5195", "#43aa8b", "#f4a261", "#577590"];
 
 const app = document.querySelector("#app");
+const colorSchemeMedia = window.matchMedia?.("(prefers-color-scheme: dark)") ?? null;
 let state = loadActiveGame();
 let celebration = null;
+let settings = loadSettings();
+let audioContext = null;
 
 function loadActiveGame() {
   try {
@@ -43,6 +47,37 @@ function loadActiveGame() {
 
 function saveGame() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    return {
+      haptics: Boolean(saved?.haptics),
+      sound: Boolean(saved?.sound),
+      theme: ["system", "light", "dark"].includes(saved?.theme) ? saved.theme : "system"
+    };
+  } catch (error) {
+    console.warn("Could not load preferences.", error);
+    return { haptics: false, sound: false, theme: "system" };
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function applyTheme() {
+  const systemDark = colorSchemeMedia?.matches;
+  const isDark = settings.theme === "dark" || (settings.theme === "system" && systemDark);
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", isDark ? "#081a2c" : "#102a43");
+}
+
+function updateSettings(nextSettings) {
+  settings = { ...settings, ...nextSettings };
+  saveSettings();
+  applyTheme();
 }
 
 function loadStoredList(key, message) {
@@ -252,17 +287,81 @@ function persistCompletedGame() {
   saveGame();
 }
 
+function provideHaptics(type) {
+  if (
+    !settings.haptics ||
+    !navigator.vibrate ||
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  const patterns = {
+    roll: 12,
+    spare: [16, 42, 16],
+    strike: [22, 35, 22, 35, 35]
+  };
+  navigator.vibrate(patterns[type]);
+}
+
+function provideSound(type) {
+  if (!settings.sound) return;
+
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+
+  audioContext ??= new AudioContextClass();
+  if (audioContext.state === "suspended") void audioContext.resume();
+
+  const notes = {
+    roll: [{ frequency: 330, duration: 0.06 }],
+    spare: [
+      { frequency: 392, duration: 0.08 },
+      { frequency: 494, duration: 0.12, offset: 0.07 }
+    ],
+    strike: [
+      { frequency: 392, duration: 0.09 },
+      { frequency: 523, duration: 0.11, offset: 0.08 },
+      { frequency: 659, duration: 0.16, offset: 0.17 }
+    ]
+  };
+  const start = audioContext.currentTime;
+
+  notes[type].forEach(({ frequency, duration, offset = 0 }) => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const noteStart = start + offset;
+    oscillator.frequency.setValueAtTime(frequency, noteStart);
+    oscillator.type = "sine";
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.025, noteStart + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + duration);
+  });
+}
+
+function provideRollFeedback(type) {
+  provideHaptics(type);
+  provideSound(type);
+}
+
 function addRoll(pins) {
   const player = activePlayer();
   const turn = nextRoll(player.frames);
   if (!turn || pins < 0 || pins > turn.maxPins) return;
   player.frames[turn.frameIndex].push(pins);
   const frame = player.frames[turn.frameIndex];
+  let feedbackType = "roll";
   if (turn.rollIndex === 0 && pins === 10) {
     celebration = { type: "strike", playerName: player.name };
+    feedbackType = "strike";
   } else if (turn.rollIndex === 1 && frame[0] + pins === 10) {
     celebration = { type: "spare", playerName: player.name };
+    feedbackType = "spare";
   }
+  provideRollFeedback(feedbackType);
   state.rollHistory.push({ playerId: player.id, frameIndex: turn.frameIndex });
   if (isFrameComplete(frame, turn.frameIndex)) {
     state.activePlayerIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
@@ -411,6 +510,25 @@ function gameSummary(players) {
     </section>`;
 }
 
+function lastGameCard(game) {
+  if (!game?.players?.length) return "";
+
+  const highGame = Math.max(...game.players.map((player) => player.total));
+  const winners = game.players
+    .filter((player) => player.total === highGame)
+    .map((player) => escapeHtml(player.name))
+    .join(" & ");
+  return `
+    <section class="last-game-card" aria-label="Last completed game">
+      <div>
+        <p class="eyebrow">Last game</p>
+        <strong>${winners} ${winners.includes(" & ") ? "tied" : "won"} with ${highGame}</strong>
+        <span>${escapeHtml(game.title || `Game ${game.gameNumber ?? ""}`)} · ${escapeHtml(formatGameDate(game.playedAt))}</span>
+      </div>
+      <button class="text-button" id="view-last-game">View</button>
+    </section>`;
+}
+
 function rollCells(frame, frameIndex) {
   const cellCount = frameIndex === 9 ? 3 : isFrameComplete(frame, frameIndex) && frame[0] === 10 ? 1 : 3;
   return Array.from({ length: cellCount }, (_, rollIndex) => {
@@ -451,6 +569,7 @@ function turnDescription(player) {
 }
 
 function renderSetup() {
+  const history = loadHistory();
   app.innerHTML = `
     <main class="setup-shell">
       <section class="hero">
@@ -488,10 +607,12 @@ function renderSetup() {
           <button class="primary-button" type="submit">Start scoring <span>→</span></button>
         </form>
       </section>
+      ${lastGameCard(history[0])}
       <div class="history-actions">
         <button class="footer-link" id="view-history">View game history</button>
         <button class="footer-link" id="export-history">Save history</button>
         <button class="footer-link" id="import-history">Load history</button>
+        <button class="footer-link" id="view-settings">Preferences</button>
         <input id="history-file" type="file" accept="application/json,.json" hidden />
       </div>
       <p class="footer-note">Scores are stored privately on this device.</p>
@@ -572,11 +693,57 @@ function renderSetup() {
     if (names.length) newGame(names, { title, venue });
   });
   document.querySelector("#view-history").addEventListener("click", () => renderHistory(false));
+  document.querySelector("#view-last-game")?.addEventListener("click", () => renderHistory(false));
   document.querySelector("#export-history").addEventListener("click", exportHistory);
   document.querySelector("#import-history").addEventListener("click", () => {
     document.querySelector("#history-file").click();
   });
   document.querySelector("#history-file").addEventListener("change", importHistory);
+  document.querySelector("#view-settings").addEventListener("click", renderSettings);
+}
+
+function renderSettings() {
+  app.innerHTML = `
+    <main class="setup-shell preferences-shell">
+      <header class="game-header">
+        <div class="logo-button"><span class="logo-badge" aria-hidden="true">10</span><span>Duckpin</span></div>
+        <button class="text-button" id="back-to-setup">Back</button>
+      </header>
+      <section class="score-header">
+        <p class="eyebrow">On this device</p>
+        <h1>Preferences</h1>
+      </section>
+      <section class="setup-card preferences-card">
+        <div class="preference-row">
+          <div><strong>Haptic feedback</strong><p>Light taps for rolls, with a bigger celebration for strikes and spares when your phone supports it.</p></div>
+          <label class="switch"><input id="haptics" type="checkbox" ${settings.haptics ? "checked" : ""} /><span aria-hidden="true"></span><span class="sr-only">Enable haptic feedback</span></label>
+        </div>
+        <div class="preference-row">
+          <div><strong>Sound effects</strong><p>Quiet roll and celebration tones. Sound stays off unless you enable it.</p></div>
+          <label class="switch"><input id="sound" type="checkbox" ${settings.sound ? "checked" : ""} /><span aria-hidden="true"></span><span class="sr-only">Enable sound effects</span></label>
+        </div>
+        <label class="theme-select">
+          <span><strong>Appearance</strong><small>Choose whether the app follows your device or stays light or dark.</small></span>
+          <select id="theme">
+            <option value="system" ${settings.theme === "system" ? "selected" : ""}>Use device setting</option>
+            <option value="light" ${settings.theme === "light" ? "selected" : ""}>Light</option>
+            <option value="dark" ${settings.theme === "dark" ? "selected" : ""}>Dark</option>
+          </select>
+        </label>
+      </section>
+      <p class="footer-note">Preferences are stored privately on this device.</p>
+    </main>`;
+
+  document.querySelector("#back-to-setup").addEventListener("click", renderSetup);
+  document.querySelector("#haptics").addEventListener("change", (event) => {
+    updateSettings({ haptics: event.target.checked });
+  });
+  document.querySelector("#sound").addEventListener("change", (event) => {
+    updateSettings({ sound: event.target.checked });
+  });
+  document.querySelector("#theme").addEventListener("change", (event) => {
+    updateSettings({ theme: event.target.value });
+  });
 }
 
 function formatGameDate(value) {
@@ -766,7 +933,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=7", { updateViaCache: "none" })
+      .register("./sw.js?v=8", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
@@ -774,4 +941,8 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+applyTheme();
+colorSchemeMedia?.addEventListener?.("change", () => {
+  if (settings.theme === "system") applyTheme();
+});
 render();
