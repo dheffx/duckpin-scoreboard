@@ -8,7 +8,7 @@ import {
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=17";
+} from "./scoring.js?v=18";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -1023,7 +1023,7 @@ function renderGame() {
                   <button class="pin-button ${pins > turn.maxPins ? "disabled" : ""}" data-pins="${pins}" ${pins > turn.maxPins ? "disabled" : ""}>${pins === 10 ? "X" : pins}</button>
                 `).join("")}
                 <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Correct last roll</button>
-                ${canDeferTurn ? `<button class="defer-turn-button" id="defer-turn">Move to end of frame</button>` : ""}
+                ${canDeferTurn ? `<button class="undo-button" id="defer-turn">Move to end of frame</button>` : ""}
               </div>
             </section>`
       }
@@ -1108,7 +1108,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=17", { updateViaCache: "none" })
+      .register("./sw.js?v=18", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);
