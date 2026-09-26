@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createFrames, formatRoll, gameTotal, nextRoll, scoreFrames } from "../src/scoring.js";
+import {
+  createFrames,
+  formatRoll,
+  gameTotal,
+  nextPlayerIndex,
+  nextRoll,
+  scoreFrames
+} from "../src/scoring.js";
 
 function game(...rolls) {
   const frames = createFrames();
@@ -49,4 +56,18 @@ test("resets tenth-frame strike bonus pins only after another strike", () => {
   const afterStrike = game(...Array.from({ length: 9 }, () => [0, 0, 0]), [10, 10]);
   assert.equal(nextRoll(afterStrike).maxPins, 10);
   assert.equal(formatRoll([10, 5, 5], 2, 9), "/");
+});
+
+test("advances turns in player order and skips finished players", () => {
+  const players = [
+    { frames: createFrames() },
+    { frames: createFrames() },
+    { frames: createFrames() }
+  ];
+
+  assert.equal(nextPlayerIndex(players, 0), 1);
+  assert.equal(nextPlayerIndex(players, 2), 0);
+
+  players[1].frames[9] = [0, 0, 0];
+  assert.equal(nextPlayerIndex(players, 0), 2);
 });

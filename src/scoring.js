@@ -46,6 +46,16 @@ export function nextRoll(frames) {
   return { frameIndex, rollIndex, maxPins };
 }
 
+export function nextPlayerIndex(players, currentPlayerIndex) {
+  for (let offset = 1; offset <= players.length; offset += 1) {
+    const playerIndex = (currentPlayerIndex + offset) % players.length;
+    if (!isFrameComplete(players[playerIndex].frames[FRAME_COUNT - 1], FRAME_COUNT - 1)) {
+      return playerIndex;
+    }
+  }
+  return currentPlayerIndex;
+}
+
 function followingRolls(frames, frameIndex) {
   return frames.slice(frameIndex + 1).flat();
 }

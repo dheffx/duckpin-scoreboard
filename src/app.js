@@ -4,6 +4,7 @@ import {
   formatRoll,
   gameTotal,
   isFrameComplete,
+  nextPlayerIndex,
   nextRoll,
   scoreFrames
 } from "./scoring.js";
@@ -18,7 +19,18 @@ let state = loadActiveGame();
 function loadActiveGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved?.players?.length) return saved;
+    if (saved?.players?.length) {
+      const selectedPlayerIndex = saved.players.findIndex((player) => player.id === saved.selectedPlayerId);
+      if (
+        !Number.isInteger(saved.activePlayerIndex) ||
+        saved.activePlayerIndex < 0 ||
+        saved.activePlayerIndex >= saved.players.length
+      ) {
+        saved.activePlayerIndex = selectedPlayerIndex >= 0 ? selectedPlayerIndex : 0;
+      }
+      if (!Array.isArray(saved.rollHistory)) saved.rollHistory = [];
+      return saved;
+    }
   } catch (error) {
     console.warn("Could not restore the saved game.", error);
   }
@@ -48,16 +60,16 @@ function newGame(playerNames) {
       color: COLORS[index % COLORS.length],
       frames: createFrames()
     })),
-    selectedPlayerId: null,
+    activePlayerIndex: 0,
+    rollHistory: [],
     savedToHistory: false
   };
-  state.selectedPlayerId = state.players[0].id;
   saveGame();
   render();
 }
 
-function selectedPlayer() {
-  return state.players.find((player) => player.id === state.selectedPlayerId) ?? state.players[0];
+function activePlayer() {
+  return state.players[state.activePlayerIndex] ?? state.players[0];
 }
 
 function isGameComplete() {
@@ -84,19 +96,52 @@ function persistCompletedGame() {
 }
 
 function addRoll(pins) {
-  const player = selectedPlayer();
+  const player = activePlayer();
   const turn = nextRoll(player.frames);
   if (!turn || pins < 0 || pins > turn.maxPins) return;
   player.frames[turn.frameIndex].push(pins);
+  state.rollHistory.push({ playerId: player.id, frameIndex: turn.frameIndex });
+  if (isFrameComplete(player.frames[turn.frameIndex], turn.frameIndex)) {
+    state.activePlayerIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
+  }
   persistCompletedGame();
   saveGame();
   render();
 }
 
 function undoRoll() {
-  const player = selectedPlayer();
-  const frame = [...player.frames].reverse().find((rolls) => rolls.length);
-  if (!frame) return;
+  const previousRoll = state.rollHistory.pop();
+  let player;
+  let frame;
+
+  if (previousRoll) {
+    const playerIndex = state.players.findIndex((item) => item.id === previousRoll.playerId);
+    if (playerIndex >= 0) {
+      player = state.players[playerIndex];
+      frame = player.frames[previousRoll.frameIndex];
+      state.activePlayerIndex = playerIndex;
+    }
+  } else {
+    for (let offset = 0; offset < state.players.length; offset += 1) {
+      const playerIndex = (state.activePlayerIndex - offset + state.players.length) % state.players.length;
+      const candidate = state.players[playerIndex];
+      let frameIndex = -1;
+      for (let index = candidate.frames.length - 1; index >= 0; index -= 1) {
+        if (candidate.frames[index].length) {
+          frameIndex = index;
+          break;
+        }
+      }
+      if (frameIndex >= 0) {
+        player = candidate;
+        frame = candidate.frames[frameIndex];
+        state.activePlayerIndex = playerIndex;
+        break;
+      }
+    }
+  }
+
+  if (!frame?.length) return;
   frame.pop();
   state.savedToHistory = false;
   saveGame();
@@ -116,10 +161,10 @@ function rollCells(frame, frameIndex) {
   }).join("");
 }
 
-function scorecard(player) {
+function scorecard(player, isActive) {
   const scores = scoreFrames(player.frames);
   return `
-    <section class="scorecard" aria-label="${escapeHtml(player.name)}'s scorecard">
+    <section class="scorecard ${isActive ? "active" : ""}" aria-label="${escapeHtml(player.name)}'s scorecard">
       <div class="scorecard-title">
         <span class="player-dot" style="--player-color:${player.color}"></span>
         <span>${escapeHtml(player.name)}</span>
@@ -200,7 +245,7 @@ function renderSetup() {
 }
 
 function renderGame() {
-  const player = selectedPlayer();
+  const player = activePlayer();
   const turn = nextRoll(player.frames);
   const complete = isGameComplete();
   app.innerHTML = `
@@ -215,19 +260,19 @@ function renderGame() {
         <p class="eyebrow">${complete ? "Final scores" : "Live scorecard"}</p>
         <h1>${complete ? "Great game." : "Keep rolling."}</h1>
       </section>
-      <nav class="player-tabs" aria-label="Choose player">
+      <nav class="player-tabs" aria-label="Player scores">
         ${state.players
           .map(
             (item) => `
-              <button class="player-tab ${item.id === player.id ? "selected" : ""}" data-player-id="${item.id}">
+              <div class="player-tab ${item.id === player.id ? "selected" : ""}" ${item.id === player.id ? 'aria-current="true"' : ""}>
                 <span style="--player-color:${item.color}"></span>${escapeHtml(item.name)}
                 <b>${scoreText(item)}</b>
-              </button>`
+              </div>`
           )
           .join("")}
       </nav>
       <section class="scorecards">
-        ${state.players.map(scorecard).join("")}
+        ${state.players.map((item) => scorecard(item, item.id === player.id)).join("")}
       </section>
       ${
         complete
@@ -239,25 +284,18 @@ function renderGame() {
           : `<section class="entry-panel">
               <div class="turn-label">
                 <span class="player-dot" style="--player-color:${player.color}"></span>
-                <div><strong>${escapeHtml(player.name)}</strong><p>${turnDescription(player)}</p></div>
+                <div><strong>${escapeHtml(player.name)}’s turn</strong><p>${turnDescription(player)}</p></div>
               </div>
               <div class="keypad" aria-label="Pins knocked down">
                 ${Array.from({ length: 11 }, (_, pins) => `
                   <button class="pin-button ${pins > turn.maxPins ? "disabled" : ""}" data-pins="${pins}" ${pins > turn.maxPins ? "disabled" : ""}>${pins === 10 ? "X" : pins}</button>
                 `).join("")}
-                <button class="undo-button" id="undo" ${player.frames.every((frame) => !frame.length) ? "disabled" : ""}>Undo last roll</button>
+                <button class="undo-button" id="undo" ${state.rollHistory.length || state.players.some((item) => item.frames.some((frame) => frame.length)) ? "" : "disabled"}>Undo last roll</button>
               </div>
             </section>`
       }
     </main>`;
 
-  document.querySelectorAll("[data-player-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedPlayerId = button.dataset.playerId;
-      saveGame();
-      render();
-    });
-  });
   document.querySelector("#restart").addEventListener("click", renderSetup);
   document.querySelector("#share").addEventListener("click", shareGame);
   document.querySelector("#new-game")?.addEventListener("click", () => {

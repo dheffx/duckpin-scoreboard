@@ -49,6 +49,7 @@ h2 { font-size: 26px; letter-spacing: -.045em; margin-bottom: 0; }
 .player-tab.selected { border-color: #102a43; box-shadow: 0 2px 0 #102a43; color: #102a43; }
 .scorecards { display: grid; gap: 12px; }
 .scorecard { background: #fff; border: 1px solid #d9e2ec; border-radius: 15px; overflow: hidden; }
+.scorecard.active { border-color: #9fb3c8; box-shadow: 0 0 0 2px rgba(39, 125, 161, .16); }
 .scorecard-title { align-items: center; border-bottom: 1px solid #e8eef3; display: flex; font-size: 15px; font-weight: 700; gap: 8px; padding: 10px 13px; }
 .scorecard-title strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 20px; margin-left: auto; }
 .frames { display: grid; grid-template-columns: repeat(10, minmax(45px, 1fr)); min-width: 560px; }
