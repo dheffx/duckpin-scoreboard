@@ -5,10 +5,11 @@ import {
   formatRoll,
   gameTotal,
   isFrameComplete,
+  liveScore,
   nextPlayerIndex,
   nextRoll,
   scoreFrames
-} from "./scoring.js?v=18";
+} from "./scoring.js?v=21";
 
 const STORAGE_KEY = "duckpin-scoreboard-active-v1";
 const HISTORY_KEY = "duckpin-scoreboard-history-v1";
@@ -21,9 +22,16 @@ const app = document.querySelector("#app");
 const colorSchemeMedia = window.matchMedia?.("(prefers-color-scheme: dark)") ?? null;
 let state = loadActiveGame();
 let celebration = null;
+let celebrationTimer = null;
 let shareFeedback = null;
 let settings = loadSettings();
 let audioContext = null;
+const GUTTER_TAUNTS = [
+  "The pins are having a very quiet moment.",
+  "A strategic pause for the next frame.",
+  "The lane won that round. It happens.",
+  "Saving those pins for later? Fair enough."
+];
 
 function loadActiveGame() {
   try {
@@ -94,12 +102,31 @@ function clearAllAppData() {
     localStorage.removeItem(key);
   });
   state = null;
-  celebration = null;
+  dismissCelebration();
   shareFeedback = null;
   settings = { haptics: false, sound: false, theme: "system" };
   audioContext = null;
   applyTheme();
   renderSetup();
+}
+
+function dismissCelebration() {
+  if (celebrationTimer !== null) window.clearTimeout(celebrationTimer);
+  celebrationTimer = null;
+  celebration = null;
+}
+
+function showCelebration(nextCelebration) {
+  dismissCelebration();
+  const timedCelebration = { ...nextCelebration, startedAt: Date.now() };
+  celebration = timedCelebration;
+  celebrationTimer = window.setTimeout(() => {
+    if (celebration === timedCelebration) {
+      celebration = null;
+      celebrationTimer = null;
+      render();
+    }
+  }, 5000);
 }
 
 function loadStoredList(key, message) {
@@ -373,6 +400,68 @@ function provideRollFeedback(type) {
   provideSound(type);
 }
 
+function completedSpecialFrameType(frame, frameIndex) {
+  if (!isFrameComplete(frame, frameIndex)) return null;
+  if (frame[0] === 10) return "strike";
+  if (frame.length >= 2 && frame[0] + frame[1] === 10) return "spare";
+  return null;
+}
+
+function consecutiveSpecialFrames(frames, completedFrameIndex) {
+  let count = 0;
+  for (let frameIndex = completedFrameIndex; frameIndex >= 0; frameIndex -= 1) {
+    if (!completedSpecialFrameType(frames[frameIndex], frameIndex)) break;
+    count += 1;
+  }
+  return count;
+}
+
+function completionAnnouncement(player, frame, frameIndex) {
+  const type = completedSpecialFrameType(frame, frameIndex);
+  if (type) {
+    const streak = consecutiveSpecialFrames(player.frames, frameIndex);
+    const label = type === "strike" ? "Strike!" : "Spare!";
+    const headline = streak >= 4
+      ? "GODLIKE!"
+      : streak === 3
+        ? "UNSTOPPABLE!"
+        : streak === 2
+          ? "INCREDIBLE!"
+          : "AMAZING!";
+    const detail = streak >= 4
+      ? `${label} Keep the streak alive.`
+      : streak === 3
+        ? `${label} Three in a row!`
+        : streak === 2
+          ? `${label} Two in a row!`
+          : type === "strike"
+            ? "Strike! What a start."
+            : "Spare! Nice pickup.";
+    return {
+      type,
+      playerName: player.name,
+      headline,
+      detail,
+      streak: Math.min(streak, 4)
+    };
+  }
+
+  if (
+    frameIndex < FRAME_COUNT - 1 &&
+    frame.length === 3 &&
+    frame.every((pins) => pins === 0)
+  ) {
+    return {
+      type: "gutter",
+      playerName: player.name,
+      headline: "A quiet frame",
+      detail: GUTTER_TAUNTS[Math.floor(Math.random() * GUTTER_TAUNTS.length)]
+    };
+  }
+
+  return null;
+}
+
 function addRoll(pins) {
   const player = activePlayer();
   const turn = nextRoll(player.frames);
@@ -381,18 +470,18 @@ function addRoll(pins) {
   shareFeedback = null;
   const frame = player.frames[turn.frameIndex];
   let feedbackType = "roll";
-  if (turn.rollIndex === 0 && pins === 10) {
-    celebration = { type: "strike", playerName: player.name };
-    feedbackType = "strike";
-  } else if (turn.rollIndex === 1 && frame[0] + pins === 10) {
-    celebration = { type: "spare", playerName: player.name };
-    feedbackType = "spare";
-  }
-  provideRollFeedback(feedbackType);
   state.rollHistory.push({ playerId: player.id, frameIndex: turn.frameIndex });
   if (isFrameComplete(frame, turn.frameIndex)) {
+    const announcement = completionAnnouncement(player, frame, turn.frameIndex);
+    if (announcement) {
+      showCelebration(announcement);
+      if (announcement.type === "strike" || announcement.type === "spare") {
+        feedbackType = announcement.type;
+      }
+    }
     state.activePlayerIndex = nextPlayerIndex(state.players, state.activePlayerIndex);
   }
+  provideRollFeedback(feedbackType);
   persistCompletedGame();
   saveGame();
   render();
@@ -403,7 +492,7 @@ function deferActiveTurn() {
   if (nextIndex === state.activePlayerIndex) return;
 
   state.activePlayerIndex = nextIndex;
-  celebration = null;
+  dismissCelebration();
   shareFeedback = null;
   saveGame();
   render();
@@ -443,7 +532,7 @@ function undoRoll() {
 
   if (!frame?.length) return;
   frame.pop();
-  celebration = null;
+  dismissCelebration();
   shareFeedback = null;
   state.savedToHistory = false;
   saveGame();
@@ -458,7 +547,7 @@ function resetGame() {
   ) {
     return;
   }
-  celebration = null;
+  dismissCelebration();
   state = null;
   localStorage.removeItem(STORAGE_KEY);
   renderSetup();
@@ -479,6 +568,56 @@ function completePlayerData(players) {
       progress: scores.map((score) => score.cumulative ?? 0)
     };
   });
+}
+
+function rankedPlayers(players, scoreForPlayer) {
+  const sortedPlayers = players
+    .map((player, index) => ({
+      ...player,
+      rankingScore: scoreForPlayer(player),
+      originalIndex: index
+    }))
+    .sort(
+      (first, second) =>
+        second.rankingScore.total - first.rankingScore.total || first.originalIndex - second.originalIndex
+    );
+
+  let previousTotal = null;
+  let rank = 0;
+  return sortedPlayers.map((player, index) => {
+    if (index === 0 || player.rankingScore.total !== previousTotal) rank = index + 1;
+    previousTotal = player.rankingScore.total;
+    return { ...player, rank };
+  });
+}
+
+function liveStandings(players) {
+  const standings = rankedPlayers(players, (player) => liveScore(player.frames));
+
+  return `
+    <section class="final-rankings live-standings" aria-label="Live standings">
+      <div class="final-rankings-heading">
+        <div><p class="eyebrow">Live score update</p><h2>Standings</h2></div>
+        <span>Score</span>
+      </div>
+      <ol class="ranking-list">
+        ${standings
+          .map(
+            (player, index) => `
+              <li>
+                <span class="ranking-place">${player.rank}</span>
+                <span class="player-dot" style="--player-color:${player.color ?? COLORS[index % COLORS.length]}"></span>
+                <strong>${escapeHtml(player.name)}</strong>
+                <b class="${player.rankingScore.hasPendingBonus ? "at-least-score" : ""}">${
+                  player.rankingScore.hasPendingBonus
+                    ? `<span>At least</span> ${player.rankingScore.total}`
+                    : player.rankingScore.total
+                }</b>
+              </li>`
+          )
+          .join("")}
+      </ol>
+    </section>`;
 }
 
 function statLeaders(players, stat) {
@@ -550,14 +689,12 @@ function gameSummary(players) {
 }
 
 function finalRankings(players) {
-  const rankedPlayers = completePlayerData(players)
-    .sort((first, second) => second.total - first.total)
-    .map((player, index, sortedPlayers) => ({
-      ...player,
-      rank: index > 0 && player.total === sortedPlayers[index - 1].total
-        ? sortedPlayers[index - 1].rank
-        : index + 1
-    }));
+  const standings = rankedPlayers(
+    completePlayerData(players),
+    (player) => ({ total: player.total, isExact: true })
+  );
+  const winners = standings.filter((player) => player.rank === 1);
+  const winnerNames = winners.map((player) => escapeHtml(player.name)).join(" & ");
 
   return `
     <section class="final-rankings" aria-label="Final rankings">
@@ -565,8 +702,15 @@ function finalRankings(players) {
         <div><p class="eyebrow">Final results</p><h2>Rankings</h2></div>
         <span>Score</span>
       </div>
+      <div class="winner-scottie ${winners.length > 1 ? "tied" : ""}">
+        <img src="./assets/winner-scottie.png" alt="${winnerNames} ${winners.length > 1 ? "are joint winners" : "is the winner"}" />
+        <div>
+          <strong>${winners.length > 1 ? "Joint winners" : "Winner"}</strong>
+          <span>${winnerNames} ${winners.length > 1 ? "share the high score." : "takes the high score."}</span>
+        </div>
+      </div>
       <ol class="ranking-list">
-        ${rankedPlayers
+        ${standings
           .map(
             (player, index) => `
               <li>
@@ -979,12 +1123,16 @@ function renderGame() {
     <main class="game-shell">
       ${
         celebration
-          ? `<div class="celebration ${celebration.type}" role="status" aria-live="polite">
-              <img class="celebration-sprite" src="./assets/terrier-${celebration.type}.png" alt="" aria-hidden="true" />
+          ? `<div class="celebration ${celebration.type} ${celebration.streak ? `streak-${celebration.streak}` : ""}" style="animation-delay:-${Math.min(Date.now() - celebration.startedAt, 5000)}ms" role="status" aria-live="polite">
+              <img class="celebration-sprite" src="${
+                celebration.type === "gutter"
+                  ? "./assets/sad-scottie.png"
+                  : `./assets/terrier-${celebration.type}.png`
+              }" alt="" aria-hidden="true" />
               <div class="celebration-copy">
-                <span class="celebration-burst" aria-hidden="true">✦ ✦ ✦</span>
-                <strong>${escapeHtml(celebration.playerName)} · ${celebration.type === "strike" ? "Strike!" : "Spare!"}</strong>
-                <span>${celebration.type === "strike" ? "Boom." : "Picked it up."}</span>
+                <span class="celebration-burst" aria-hidden="true">${celebration.type === "gutter" ? "· · ·" : "✦ ✦ ✦"}</span>
+                <strong>${escapeHtml(celebration.playerName)} · ${escapeHtml(celebration.headline)}</strong>
+                <span>${escapeHtml(celebration.detail)}</span>
               </div>
             </div>`
           : ""
@@ -1031,6 +1179,7 @@ function renderGame() {
       <section class="scorecards">
         ${orderedPlayers.map((item) => scorecard(item, item.id === player.id)).join("")}
       </section>
+      ${complete ? "" : liveStandings(state.players)}
       ${
         complete
           ? `<section class="complete-card">
@@ -1054,15 +1203,6 @@ function renderGame() {
   document.querySelectorAll("[data-pins]").forEach((button) => {
     button.addEventListener("click", () => addRoll(Number(button.dataset.pins)));
   });
-  if (celebration) {
-    const activeCelebration = celebration;
-    window.setTimeout(() => {
-      if (celebration === activeCelebration) {
-        celebration = null;
-        render();
-      }
-    }, 2000);
-  }
 }
 
 async function shareGame() {
@@ -1108,7 +1248,7 @@ if ("serviceWorker" in navigator) {
     });
 
     navigator.serviceWorker
-      .register("./sw.js?v=18", { updateViaCache: "none" })
+      .register("./sw.js?v=21", { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch((error) => {
         console.warn("Offline support could not be enabled.", error);

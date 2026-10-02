@@ -5,6 +5,7 @@ import {
   frameStats,
   formatRoll,
   gameTotal,
+  liveScore,
   nextPlayerIndex,
   nextRoll,
   scoreFrames
@@ -76,4 +77,30 @@ test("advances turns in player order and skips finished players", () => {
 test("counts strike and spare frames for game summaries", () => {
   const frames = game([10], [7, 3], [3, 3, 4], ...Array.from({ length: 7 }, () => [0, 0, 0]));
   assert.deepEqual(frameStats(frames), { strikes: 1, spares: 1 });
+});
+
+test("reports at-least score for pending strike and spare bonuses", () => {
+  assert.deepEqual(liveScore(game([10])), { total: 10, hasPendingBonus: true });
+  assert.deepEqual(liveScore(game([7, 3])), { total: 10, hasPendingBonus: true });
+});
+
+test("includes entered rolls when strike and spare bonuses are partially known", () => {
+  assert.deepEqual(liveScore(game([10], [4])), { total: 18, hasPendingBonus: true });
+  assert.deepEqual(liveScore(game([7, 3], [5])), { total: 20, hasPendingBonus: false });
+  assert.deepEqual(liveScore(game([10], [4, 3])), { total: 24, hasPendingBonus: false });
+});
+
+test("includes resolved early frames and partial open frames in live scores", () => {
+  assert.deepEqual(liveScore(game([3, 2, 1], [4, 3])), { total: 13, hasPendingBonus: false });
+  assert.deepEqual(
+    liveScore(game(...Array.from({ length: 10 }, () => [1, 1, 1]))),
+    { total: 30, hasPendingBonus: false }
+  );
+});
+
+test("uses entered ninth and tenth balls for live-score minimums", () => {
+  const blanks = Array.from({ length: 8 }, () => [0, 0, 0]);
+  assert.deepEqual(liveScore(game(...blanks, [10], [5])), { total: 20, hasPendingBonus: true });
+  assert.deepEqual(liveScore(game(...blanks, [7, 3], [6])), { total: 22, hasPendingBonus: false });
+  assert.deepEqual(liveScore(game(...blanks, [10], [10, 5])), { total: 40, hasPendingBonus: true });
 });

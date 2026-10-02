@@ -98,6 +98,40 @@ export function gameTotal(frames) {
   return scores.at(-1)?.cumulative ?? null;
 }
 
+export function liveScore(frames) {
+  const total = frames.reduce((runningTotal, frame, frameIndex) => {
+    if (frameIndex === FRAME_COUNT - 1) {
+      return runningTotal + frame.reduce((sum, pins) => sum + pins, 0);
+    }
+
+    if (isStrike(frame)) {
+      const bonuses = followingRolls(frames, frameIndex).slice(0, 2);
+      return runningTotal + 10 + bonuses.reduce((sum, pins) => sum + pins, 0);
+    }
+
+    if (frame.length >= 2 && frame[0] + frame[1] === 10) {
+      const [bonus = 0] = followingRolls(frames, frameIndex);
+      return runningTotal + 10 + bonus;
+    }
+
+    return runningTotal + frame.reduce((sum, pins) => sum + pins, 0);
+  }, 0);
+
+  const hasPendingBonus = frames.some((frame, frameIndex) => {
+    if (frameIndex === FRAME_COUNT - 1) {
+      return (
+        (isStrike(frame) && frame.length < 3) ||
+        (frame.length >= 2 && frame[0] + frame[1] === 10 && frame.length < 3)
+      );
+    }
+
+    if (isStrike(frame)) return followingRolls(frames, frameIndex).length < 2;
+    return frame.length >= 2 && frame[0] + frame[1] === 10 && followingRolls(frames, frameIndex).length < 1;
+  });
+
+  return { total, hasPendingBonus };
+}
+
 export function frameStats(frames) {
   return frames.reduce(
     (stats, frame) => ({
